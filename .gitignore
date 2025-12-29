@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env
+
+# Runtime storage
+storage/uploaded_audio/
+storage/processed_audio/
+storage/chunks/
+storage/results/
+storage/reports/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
