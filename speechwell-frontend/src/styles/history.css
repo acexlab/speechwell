@@ -1,0 +1,332 @@
+/* File Logic Summary: Stylesheet controlling visual presentation; it affects UI clarity but not scoring algorithms. */
+
+.history-layout {
+  display: flex;
+  margin-top: 70px;
+}
+
+.history-content {
+  flex: 1;
+  margin-left: 200px;
+  padding: 30px;
+  background: linear-gradient(135deg, #f5f8fc 0%, #e8f1f8 100%);
+  min-height: calc(100vh - 70px);
+}
+
+.history-header {
+  margin-bottom: 30px;
+}
+
+.history-header h1 {
+  font-size: 1.8em;
+  color: #003d82;
+  margin: 0;
+}
+
+/* Filters */
+.history-filters {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+}
+
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95em;
+  background-color: white;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #0052a3;
+  box-shadow: 0 0 0 3px rgba(0, 82, 163, 0.1);
+}
+
+.date-separator {
+  color: #999;
+  font-weight: 600;
+}
+
+.severity-select {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+.severity-select:focus {
+  outline: none;
+  border-color: #0052a3;
+  box-shadow: 0 0 0 3px rgba(0, 82, 163, 0.1);
+}
+
+.apply-btn {
+  padding: 10px 24px;
+  background-color: #0052a3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.apply-btn:hover {
+  background-color: #003d82;
+  box-shadow: 0 2px 8px rgba(0, 82, 163, 0.3);
+}
+
+/* Table */
+.table-responsive {
+  overflow-x: auto;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 30px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table thead {
+  background-color: #f5f7fa;
+  border-bottom: 2px solid #e0e6ed;
+}
+
+.history-table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.9em;
+}
+
+.history-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.3s ease;
+}
+
+.history-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.history-table td {
+  padding: 16px;
+  color: #333;
+  font-size: 0.95em;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+  text-align: center;
+  min-width: 60px;
+}
+
+.badge-high {
+  background-color: #ffcdd2;
+  color: #c62828;
+}
+
+.badge-moderate {
+  background-color: #ffe0b2;
+  color: #e65100;
+}
+
+.badge-low {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.badge-green {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.badge-blue {
+  background-color: #b3e5fc;
+  color: #01579b;
+}
+
+/* View Button */
+.view-btn {
+  padding: 8px 16px;
+  background-color: #0052a3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85em;
+  transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+  background-color: #003d82;
+  box-shadow: 0 2px 8px rgba(0, 82, 163, 0.3);
+}
+
+/* Pagination */
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.rows-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.rows-select:focus {
+  outline: none;
+  border-color: #0052a3;
+}
+
+.pagination-info {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.pagination-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #ddd;
+  background-color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.pagination-btn:hover {
+  border-color: #0052a3;
+  color: #0052a3;
+}
+
+.pagination-btn.active {
+  background-color: #0052a3;
+  color: white;
+  border-color: #0052a3;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .history-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .history-filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .severity-select {
+    width: 100%;
+  }
+
+  .apply-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .history-header h1 {
+    font-size: 1.5em;
+  }
+
+  .history-table {
+    font-size: 0.85em;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 12px;
+  }
+
+  .history-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rows-select,
+  .severity-select,
+  .apply-btn {
+    width: 100%;
+  }
+
+  .date-filter {
+    width: 100%;
+  }
+
+  .date-input {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .history-content {
+    padding: 15px;
+  }
+
+  .history-table {
+    font-size: 0.75em;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 8px;
+  }
+
+  .view-btn {
+    padding: 6px 10px;
+    font-size: 0.75em;
+  }
+
+  .pagination-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

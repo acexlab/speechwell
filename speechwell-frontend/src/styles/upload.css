@@ -1,0 +1,399 @@
+/* File Logic Summary: Stylesheet controlling visual presentation; it affects UI clarity but not scoring algorithms. */
+
+.upload-layout {
+  display: flex;
+  margin-top: 70px;
+}
+
+.upload-content {
+  flex: 1;
+  margin-left: 200px;
+  padding: 30px;
+  background: linear-gradient(135deg, #f5f8fc 0%, #e8f1f8 100%);
+  min-height: calc(100vh - 70px);
+}
+
+.upload-header {
+  margin-bottom: 30px;
+}
+
+.upload-header h1 {
+  font-size: 1.8em;
+  color: #003d82;
+  margin: 0 0 10px 0;
+}
+
+.upload-header p {
+  color: #666;
+  margin: 0;
+  font-size: 0.95em;
+}
+
+/* Filters */
+.upload-filters {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding: 15px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9em;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.95em;
+  transition: border-color 0.3s ease;
+}
+
+.filter-select:hover {
+  border-color: #0052a3;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #0052a3;
+  box-shadow: 0 0 0 3px rgba(0, 82, 163, 0.1);
+}
+
+/* Upload Container */
+.upload-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+/* Upload Box */
+.upload-box {
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.drag-drop {
+  text-align: center;
+  padding: 40px;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.drag-drop.active {
+  border-color: #0052a3;
+  background-color: #f0f5fa;
+}
+
+.upload-icon {
+  width: 60px;
+  height: 60px;
+  color: #0052a3;
+  fill: currentColor;
+  margin-bottom: 15px;
+}
+
+.drag-drop h2 {
+  color: #003d82;
+  margin: 0 0 5px 0;
+  font-size: 1.3em;
+}
+
+.drag-drop > p:nth-of-type(1) {
+  color: #666;
+  margin: 0 0 20px 0;
+}
+
+.file-input-wrapper {
+  position: relative;
+  margin: 20px 0;
+}
+
+.file-input {
+  display: none;
+}
+
+.browse-text {
+  color: #0052a3;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.browse-text:hover {
+  color: #003d82;
+}
+
+.selected-file {
+  margin: 20px 0;
+  padding: 12px;
+  background-color: #e8f5e9;
+  border-radius: 6px;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.selected-file p {
+  margin: 0;
+}
+
+.file-size-info {
+  color: #999;
+  margin: 0;
+  font-size: 0.85em;
+}
+
+/* Recording Box */
+.recording-box {
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.recording-box h3 {
+  color: #003d82;
+  margin: 0 0 30px 0;
+  font-size: 1.2em;
+}
+
+.recording-area {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.microphone-icon {
+  width: 60px;
+  height: 60px;
+  fill: #0052a3;
+}
+
+.recording-indicator {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid #d32f2f;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(211, 47, 47, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(211, 47, 47, 0);
+  }
+}
+
+.btn-recording {
+  padding: 12px 32px;
+  font-size: 1em;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  background-color: #d32f2f;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+}
+
+.btn-recording:hover {
+  background-color: #b71c1c;
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+}
+
+.btn-recording.active {
+  background-color: #f57c00;
+}
+
+.recording-note {
+  color: #999;
+  font-size: 0.85em;
+  margin: 0;
+}
+
+/* Upload Actions */
+.upload-actions {
+  background-color: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0052a3, #0073d9);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  color: #666;
+  font-size: 0.9em;
+  margin: 0;
+}
+
+.progress-text.success {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.btn-upload {
+  padding: 12px 32px;
+  font-size: 1em;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  background-color: #0052a3;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+}
+
+.btn-upload:hover {
+  background-color: #003d82;
+  box-shadow: 0 4px 12px rgba(0, 82, 163, 0.3);
+}
+
+.btn-upload:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .upload-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .upload-container {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-filters {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .upload-header h1 {
+    font-size: 1.5em;
+  }
+
+  .upload-filters {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .drag-drop {
+    min-height: 200px;
+    padding: 20px;
+  }
+
+  .upload-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .recording-area {
+    width: 100px;
+    height: 100px;
+  }
+
+  .microphone-icon {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-content {
+    padding: 15px;
+  }
+
+  .upload-header h1 {
+    font-size: 1.2em;
+  }
+
+  .upload-box,
+  .recording-box,
+  .upload-actions {
+    padding: 20px;
+  }
+
+  .drag-drop {
+    min-height: 150px;
+    padding: 15px;
+  }
+
+  .upload-icon {
+    width: 35px;
+    height: 35px;
+  }
+
+  .drag-drop h2 {
+    font-size: 1.1em;
+  }
+
+  .btn-recording,
+  .btn-upload {
+    width: 100%;
+  }
+}
+

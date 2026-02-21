@@ -1,0 +1,401 @@
+/* File Logic Summary: Stylesheet controlling visual presentation; it affects UI clarity but not scoring algorithms. */
+
+/* Hero Section */
+.landing-container {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 600px;
+  padding: 60px 40px;
+  background: linear-gradient(135deg, #f5f8fc 0%, #e8f1f8 100%);
+}
+
+.hero-content {
+  flex: 1;
+  max-width: 600px;
+  padding-right: 40px;
+}
+
+.hero-content h1 {
+  font-size: 3em;
+  font-weight: 700;
+  color: #003d82;
+  margin: 0 0 20px 0;
+  line-height: 1.2;
+}
+
+.hero-content p {
+  font-size: 1.1em;
+  color: #666;
+  margin: 0 0 30px 0;
+  line-height: 1.6;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 20px;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 12px 28px;
+  font-size: 1em;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: #0052a3;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #003d82;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 82, 163, 0.3);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #0052a3;
+  border: 2px solid #0052a3;
+}
+
+.btn-secondary:hover {
+  background-color: #f0f5fa;
+}
+
+.hero-illustration {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+}
+
+.brain-illustration {
+  width: 100%;
+  max-width: 350px;
+  height: auto;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* Features Section */
+.features {
+  padding: 80px 40px;
+  background-color: #fff;
+  text-align: center;
+}
+
+.features h2 {
+  font-size: 2.5em;
+  color: #003d82;
+  margin-bottom: 50px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  padding: 30px 20px;
+  border: 1px solid #e0e8f0;
+  border-radius: 12px;
+  background-color: #f9fbfd;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.feature-card:hover {
+  border-color: #0052a3;
+  box-shadow: 0 8px 24px rgba(0, 82, 163, 0.15);
+  transform: translateY(-5px);
+}
+
+.feature-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: white;
+}
+
+.feature-icon.dysarthria {
+  background: linear-gradient(135deg, #0052a3, #0073d9);
+}
+
+.feature-icon.stuttering {
+  background: linear-gradient(135deg, #0073d9, #0294f5);
+}
+
+.feature-icon.grammar {
+  background: linear-gradient(135deg, #0294f5, #1db5f5);
+}
+
+.feature-icon.reports {
+  background: linear-gradient(135deg, #1db5f5, #3ec5f5);
+}
+
+.feature-icon svg {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
+}
+
+.feature-card h3 {
+  font-size: 1.3em;
+  color: #003d82;
+  margin: 0 0 10px 0;
+}
+
+.feature-card p {
+  color: #666;
+  margin: 0;
+  font-size: 0.95em;
+}
+
+/* How It Works Section */
+.how-it-works {
+  padding: 80px 40px;
+  background: linear-gradient(135deg, #f5f8fc 0%, #e8f1f8 100%);
+  text-align: center;
+}
+
+.how-it-works h2 {
+  font-size: 2.5em;
+  color: #003d82;
+  margin-bottom: 60px;
+}
+
+.steps-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  max-width: 1000px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.step {
+  flex: 1;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.step-number {
+  font-size: 2em;
+  font-weight: 700;
+  color: white;
+  background-color: #0052a3;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: linear-gradient(135deg, #0052a3, #0073d9);
+}
+
+.step-icon svg {
+  width: 40px;
+  height: 40px;
+  fill: currentColor;
+}
+
+.step-icon.upload {
+  background: linear-gradient(135deg, #0052a3, #0073d9);
+}
+
+.step-icon.analyze {
+  background: linear-gradient(135deg, #0073d9, #0294f5);
+}
+
+.step-icon.report {
+  background: linear-gradient(135deg, #0294f5, #1db5f5);
+}
+
+.step h3 {
+  font-size: 1.2em;
+  color: #003d82;
+  margin: 0;
+}
+
+.step p {
+  color: #666;
+  margin: 0;
+  font-size: 0.95em;
+}
+
+.step-divider {
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ccc, transparent);
+  margin: 30px;
+}
+
+@media (max-width: 768px) {
+  .step-divider {
+    width: 3px;
+    height: 40px;
+    margin: 20px 0;
+  }
+}
+
+/* Footer */
+.footer {
+  padding: 40px;
+  background-color: #003d82;
+  color: white;
+  text-align: center;
+}
+
+.footer-links {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  color: #a0c4ff;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+  color: white;
+}
+
+.footer-text {
+  color: #7fa3cc;
+  margin: 0;
+  font-size: 0.9em;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .hero {
+    flex-direction: column;
+    padding: 40px 20px;
+    min-height: auto;
+  }
+
+  .hero-content {
+    padding-right: 0;
+    margin-bottom: 30px;
+  }
+
+  .hero-content h1 {
+    font-size: 2.2em;
+  }
+
+  .hero-illustration {
+    width: 100%;
+    height: 300px;
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .steps-container {
+    flex-direction: column;
+  }
+
+  .step-divider {
+    width: 3px;
+    height: 40px;
+    margin: 20px 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    min-height: auto;
+    padding: 30px 20px;
+  }
+
+  .hero-content h1 {
+    font-size: 1.8em;
+  }
+
+  .hero-content p {
+    font-size: 1em;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+
+  .features {
+    padding: 60px 20px;
+  }
+
+  .features h2,
+  .how-it-works h2 {
+    font-size: 1.8em;
+  }
+
+  .feature-card {
+    padding: 20px 15px;
+  }
+
+  .how-it-works {
+    padding: 60px 20px;
+  }
+
+  .footer {
+    padding: 30px 20px;
+  }
+
+  .footer-links {
+    gap: 15px;
+  }
+}
+
