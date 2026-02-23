@@ -5,6 +5,7 @@ File Logic Summary: Results page. It fetches a single analysis, computes overall
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import InteractiveButton from "../components/InteractiveButton";
 import { getAnalysisResult, downloadReport, type AnalysisResult } from "../api/api";
 import "../styles/results.css";
 
@@ -77,6 +78,7 @@ export default function Results() {
         <Sidebar />
         <main className="results-content">
           <div className="results-container">
+            <div className="loading-spinner" />
             <p>Loading analysis results...</p>
           </div>
         </main>
@@ -335,27 +337,27 @@ export default function Results() {
 
           {/* Action Buttons */}
           <div className="results-actions">
-            <button className="btn-pdf" onClick={handleDownloadPDF}>
+            <InteractiveButton className="btn-pdf" onClick={handleNewAnalysis}>
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+              </svg>
+              Record Again
+            </InteractiveButton>
+
+            <InteractiveButton className="btn-pdf" onClick={handleDownloadPDF}>
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2z" />
                 <path d="M11 3L5.5 8.5l1.42 1.41L11 5.83V15h2V5.83l4.08 4.08L18.5 8.5 12 3z" />
               </svg>
-              Download PDF
-            </button>
+              Save Results
+            </InteractiveButton>
 
-            <button className="btn-share" onClick={handleShare}>
+            <InteractiveButton className="btn-share" variant="secondary" onClick={handleShare}>
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.06c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.78 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.78 0 1.49-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
               </svg>
-              {copied ? "Copied!" : "Share"}
-            </button>
-
-            <button className="btn-new-analysis" onClick={handleNewAnalysis}>
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-              </svg>
-              New Analysis
-            </button>
+              {copied ? "Copied!" : "Share Analysis"}
+            </InteractiveButton>
           </div>
         </div>
       </main>

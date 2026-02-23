@@ -1,332 +1,231 @@
-/* File Logic Summary: Stylesheet controlling visual presentation; it affects UI clarity but not scoring algorithms. */
+/* File Logic Summary: History page styles for filters, sortable-like table presentation, and compact mobile pagination UX. */
 
 .history-layout {
   display: flex;
-  margin-top: 70px;
+  margin-top: var(--nav-h);
 }
 
 .history-content {
   flex: 1;
-  margin-left: 200px;
-  padding: 30px;
-  background: linear-gradient(135deg, #f5f8fc 0%, #e8f1f8 100%);
-  min-height: calc(100vh - 70px);
+  margin-left: var(--sidebar-w);
+  padding: clamp(1rem, 2.8vw, 1.9rem);
+  min-height: calc(100vh - var(--nav-h));
 }
 
 .history-header {
-  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
 }
 
 .history-header h1 {
-  font-size: 1.8em;
-  color: #003d82;
-  margin: 0;
+  color: #11395f;
 }
 
-/* Filters */
 .history-filters {
   display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-  margin-bottom: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #fff, #f8fcff);
+  border: 1px solid rgba(208, 225, 242, 0.9);
+  padding: 0.75rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.9rem;
 }
 
 .date-filter {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.45rem;
 }
 
-.date-input {
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 0.95em;
-  background-color: white;
-}
-
-.date-input:focus {
-  outline: none;
-  border-color: #0052a3;
-  box-shadow: 0 0 0 3px rgba(0, 82, 163, 0.1);
+.date-input,
+.severity-select,
+.rows-select {
+  padding: 0.5rem 0.68rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
 }
 
 .date-separator {
-  color: #999;
-  font-weight: 600;
-}
-
-.severity-select {
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background-color: white;
-  color: #333;
-  cursor: pointer;
-  font-size: 0.95em;
-}
-
-.severity-select:focus {
-  outline: none;
-  border-color: #0052a3;
-  box-shadow: 0 0 0 3px rgba(0, 82, 163, 0.1);
+  color: #7e97b0;
+  font-weight: 700;
+  font-size: 0.82rem;
 }
 
 .apply-btn {
-  padding: 10px 24px;
-  background-color: #0052a3;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  border-radius: 999px;
+  padding: 0.5rem 0.88rem;
+  background: linear-gradient(135deg, var(--primary), #1f7ac3);
+  font-size: 0.86rem;
 }
 
-.apply-btn:hover {
-  background-color: #003d82;
-  box-shadow: 0 2px 8px rgba(0, 82, 163, 0.3);
-}
-
-/* Table */
 .table-responsive {
-  overflow-x: auto;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  margin-bottom: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(208, 225, 242, 0.9);
+  background: #fff;
+  overflow: auto;
+  box-shadow: var(--shadow-sm);
 }
 
 .history-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 700px;
 }
 
 .history-table thead {
-  background-color: #f5f7fa;
-  border-bottom: 2px solid #e0e6ed;
+  background: #f4f9ff;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.72rem;
+  text-align: left;
+  border-bottom: 1px solid #edf3fa;
 }
 
 .history-table th {
-  padding: 16px;
-  text-align: left;
-  font-weight: 600;
-  color: #666;
-  font-size: 0.9em;
-}
-
-.history-table tbody tr {
-  border-bottom: 1px solid #f0f0f0;
-  transition: background-color 0.3s ease;
-}
-
-.history-table tbody tr:hover {
-  background-color: #f9f9f9;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #5f7994;
 }
 
 .history-table td {
-  padding: 16px;
-  color: #333;
-  font-size: 0.95em;
+  font-size: 0.9rem;
+  color: #214160;
 }
 
-/* Badges */
+.history-table tbody tr:hover {
+  background: #f9fcff;
+}
+
 .badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.85em;
-  font-weight: 600;
-  text-align: center;
-  min-width: 60px;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 64px;
+  padding: 0.24rem 0.48rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
 }
 
 .badge-high {
-  background-color: #ffcdd2;
-  color: #c62828;
+  background: #fdecef;
+  color: #a5313f;
 }
 
 .badge-moderate {
-  background-color: #ffe0b2;
-  color: #e65100;
+  background: #fff2e7;
+  color: #9d5a23;
 }
 
-.badge-low {
-  background-color: #c8e6c9;
-  color: #2e7d32;
+.badge-low,
+.badge-good {
+  background: #e9f9f0;
+  color: #1f7f51;
 }
 
-.badge-green {
-  background-color: #c8e6c9;
-  color: #2e7d32;
-}
-
-.badge-blue {
-  background-color: #b3e5fc;
-  color: #01579b;
-}
-
-/* View Button */
 .view-btn {
-  padding: 8px 16px;
-  background-color: #0052a3;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.85em;
-  transition: all 0.3s ease;
+  border-radius: 999px;
+  padding: 0.36rem 0.78rem;
+  font-size: 0.78rem;
+  background: linear-gradient(135deg, var(--primary), #1f7ac3);
 }
 
-.view-btn:hover {
-  background-color: #003d82;
-  box-shadow: 0 2px 8px rgba(0, 82, 163, 0.3);
-}
-
-/* Pagination */
 .history-pagination {
+  margin-top: 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(208, 225, 242, 0.9);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  padding: 0.65rem 0.75rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.rows-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background-color: white;
-  cursor: pointer;
-  font-size: 0.9em;
-}
-
-.rows-select:focus {
-  outline: none;
-  border-color: #0052a3;
+  gap: 0.55rem;
 }
 
 .pagination-info {
-  color: #666;
-  font-size: 0.9em;
+  font-size: 0.82rem;
+  color: #5c7690;
 }
 
 .pagination-buttons {
   display: flex;
-  gap: 5px;
+  gap: 0.35rem;
 }
 
 .pagination-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: 1px solid #ddd;
-  background-color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  color: #333;
-  transition: all 0.3s ease;
-}
-
-.pagination-btn:hover {
-  border-color: #0052a3;
-  color: #0052a3;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #315778;
+  font-weight: 700;
 }
 
 .pagination-btn.active {
-  background-color: #0052a3;
-  color: white;
-  border-color: #0052a3;
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 1120px) {
+  .history-content {
+    margin-left: 82px;
+  }
+}
+
+@media (max-width: 860px) {
   .history-content {
     margin-left: 0;
-    padding: 20px;
+    padding-bottom: 92px;
   }
 
   .history-filters {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .severity-select {
-    width: 100%;
-  }
-
-  .apply-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .history-header h1 {
-    font-size: 1.5em;
-  }
-
-  .history-table {
-    font-size: 0.85em;
-  }
-
-  .history-table th,
-  .history-table td {
-    padding: 12px;
-  }
-
-  .history-pagination {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .rows-select,
-  .severity-select,
-  .apply-btn {
-    width: 100%;
+    align-items: stretch;
   }
 
   .date-filter {
     width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
   }
 
-  .date-input {
-    flex: 1;
-  }
-}
-
-@media (max-width: 480px) {
-  .history-content {
-    padding: 15px;
+  .severity-select,
+  .apply-btn,
+  .rows-select {
+    width: 100%;
   }
 
-  .history-table {
-    font-size: 0.75em;
-  }
-
-  .history-table th,
-  .history-table td {
-    padding: 8px;
-  }
-
-  .view-btn {
-    padding: 6px 10px;
-    font-size: 0.75em;
+  .history-pagination {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .pagination-buttons {
-    width: 100%;
     justify-content: center;
   }
 }
 
+@media (max-width: 520px) {
+  .date-filter {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  .date-separator {
+    display: none;
+  }
+}

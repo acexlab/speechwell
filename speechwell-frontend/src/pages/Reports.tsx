@@ -5,24 +5,32 @@ File Logic Summary: Reports page. It lists completed analyses and triggers PDF d
 import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { downloadReport, getAnalysisHistory, type HistoryItem } from "../api/api";
+import LoadingState from "../components/LoadingState";
+import RefreshButton from "../components/RefreshButton";
+import "../styles/reports.css";
 
 export default function Reports() {
   const [reports, setReports] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const loadReports = async () => {
-      try {
-        const history = await getAnalysisHistory();
-        setReports(history);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load reports");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadReports = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const history = await getAnalysisHistory();
+      setReports(history);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load reports");
+    } finally {
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadReports();
   }, []);
 
@@ -49,6 +57,7 @@ export default function Reports() {
         <div className="dashboard-header">
           <div className="header-top">
             <h1>Reports</h1>
+            <RefreshButton refreshing={refreshing} onClick={() => loadReports(true)} />
           </div>
           <p className="header-subtitle">
             Generated PDF reports will appear here as you complete analyses.
@@ -56,7 +65,7 @@ export default function Reports() {
         </div>
 
         {loading ? (
-          <p>Loading reports...</p>
+          <LoadingState label="Loading reports..." />
         ) : error ? (
           <p style={{ color: "#c00" }}>Error: {error}</p>
         ) : reports.length === 0 ? (

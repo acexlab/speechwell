@@ -1,0 +1,226 @@
+/* File Logic Summary: Profile settings styles for theme selector and personal-details form. */
+
+.profile-layout {
+  display: flex;
+  margin-top: var(--nav-h);
+}
+
+.profile-content {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  padding: clamp(1rem, 2.8vw, 1.9rem);
+  min-height: calc(100vh - var(--nav-h));
+}
+
+.profile-header {
+  margin-bottom: 1rem;
+}
+
+.profile-header h1 {
+  color: var(--text-strong);
+  margin-bottom: 0.35rem;
+}
+
+.profile-form {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.profile-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.profile-card h2 {
+  color: var(--text-strong);
+  font-size: 1.3rem;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.theme-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.5rem;
+  text-align: left;
+  animation: fadeInTheme 0.4s ease both;
+}
+
+.theme-card:hover {
+  transform: scale(1.02);
+}
+
+.theme-card.active {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.theme-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  animation: spinIn 0.45s ease both;
+}
+
+.theme-palette {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.theme-palette i {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease;
+}
+
+.theme-palette i:hover {
+  transform: scale(1.2);
+}
+
+.theme-preview-banner {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.theme-preview-banner div {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.profile-card label {
+  display: grid;
+  gap: 0.36rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.profile-card input,
+.profile-card select,
+.profile-card textarea {
+  width: 100%;
+  padding: 0.62rem 0.72rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-strong);
+}
+
+.profile-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.72rem;
+}
+
+.profile-grid h2,
+.profile-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+.profile-error,
+.profile-success {
+  margin: 0;
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  font-weight: 700;
+}
+
+.profile-error {
+  border: 1px solid #f4c4cf;
+  background: #fff1f4;
+  color: #a4254a;
+}
+
+.profile-success {
+  border: 1px solid #b8e8ce;
+  background: #ecfbf2;
+  color: #1f7f51;
+}
+
+.profile-save {
+  width: fit-content;
+  min-width: 170px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+}
+
+@keyframes spinIn {
+  from {
+    transform: rotate(0deg) scale(0.8);
+  }
+  to {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes fadeInTheme {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1120px) {
+  .profile-content {
+    margin-left: 88px;
+  }
+}
+
+@media (max-width: 860px) {
+  .profile-content {
+    margin-left: 0;
+    padding-bottom: 92px;
+  }
+}
+
+@media (max-width: 700px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-preview-banner div {
+    width: 100%;
+  }
+
+  .profile-save {
+    width: 100%;
+  }
+}

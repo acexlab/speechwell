@@ -3,7 +3,7 @@ File Logic Summary: API request/response schema contracts. It defines typed payl
 """
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 
 
@@ -31,6 +31,33 @@ class UserResponse(BaseModel):
     email: str
     full_name: Optional[str]
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    location: Optional[str] = None
+    occupation: Optional[str] = None
+    primary_goal: Optional[str] = None
+    bio: Optional[str] = None
+
+
+class UserProfileResponse(BaseModel):
+    id: int
+    email: str
+    full_name: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    location: Optional[str] = None
+    occupation: Optional[str] = None
+    primary_goal: Optional[str] = None
+    bio: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -87,4 +114,19 @@ class HistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============ CHAT SCHEMAS ============
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[ChatMessage] = []
+
+
+class ChatResponse(BaseModel):
+    reply: str
 

@@ -1,0 +1,94 @@
+/* File Logic Summary: Shared loading and refreshing animations used by multiple pages for consistent feedback. */
+
+.loading-state {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 1rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+}
+
+.loading-state p {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.loading-state__spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid #d7d2eb;
+  border-top-color: var(--primary);
+  animation: uiSpin 0.8s linear infinite;
+  will-change: transform;
+}
+
+.loading-state__track {
+  width: min(260px, 72vw);
+  height: 10px;
+  border-radius: 999px;
+  background: #ddd8ee;
+  overflow: hidden;
+}
+
+.loading-state__track span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  animation: shimmerSweep 0.95s linear infinite;
+  will-change: transform;
+}
+
+.refresh-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 10px;
+  padding: 0.48rem 0.72rem;
+  background: #fff;
+  color: var(--primary);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: var(--primary-soft);
+  transform: translateY(-1px);
+}
+
+.refresh-button:disabled {
+  opacity: 0.72;
+}
+
+.refresh-button svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.refresh-button svg.spinning {
+  animation: uiSpin 0.7s linear infinite;
+  will-change: transform;
+}
+
+@keyframes uiSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

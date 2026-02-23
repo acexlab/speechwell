@@ -6,6 +6,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { getAnalysisHistory, type HistoryItem } from "../api/api";
+import LoadingState from "../components/LoadingState";
+import RefreshButton from "../components/RefreshButton";
 import "../styles/history.css";
 
 export default function History() {
@@ -17,22 +19,27 @@ export default function History() {
   const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
   const [filteredData, setFilteredData] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const data = await getAnalysisHistory();
-        setHistoryData(data);
-        setFilteredData(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load history");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchHistory = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const data = await getAnalysisHistory();
+      setHistoryData(data);
+      setFilteredData(data);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load history");
+    } finally {
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchHistory();
   }, []);
 
@@ -103,6 +110,7 @@ export default function History() {
         <div className="history-header">
           <h1>Analysis History</h1>
           <p>Review and filter all your speech analyses</p>
+          <RefreshButton refreshing={refreshing} onClick={() => fetchHistory(true)} />
         </div>
 
         <div className="history-filters">
@@ -139,7 +147,7 @@ export default function History() {
         </div>
 
         {loading ? (
-          <p>Loading history...</p>
+          <LoadingState label="Loading history..." />
         ) : error ? (
           <p style={{ color: "#c00" }}>Error: {error}</p>
         ) : filteredData.length === 0 ? (

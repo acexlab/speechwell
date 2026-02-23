@@ -1,21 +1,64 @@
 /*
-File Logic Summary: TypeScript module for frontend runtime logic, routing, API integration, or UI behavior.
+File Logic Summary: Therapy Hub page that filters exercises and offers direct YouTube speech-training resources by category.
 */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import InteractiveButton from "../components/InteractiveButton";
 import "../styles/therapy-hub.css";
 
 interface Exercise {
   id: string;
   title: string;
   description: string;
-  category: string;
+  category: "Dysarthria" | "Stuttering";
   type?: string;
+  youtubeUrl?: string;
 }
+
+interface ResourceLink {
+  id: string;
+  title: string;
+  category: "Dysarthria" | "Stuttering" | "General";
+  url: string;
+}
+
+const YOUTUBE_RESOURCES: ResourceLink[] = [
+  {
+    id: "r1",
+    title: "Dysarthria speech therapy exercises (search)",
+    category: "Dysarthria",
+    url: "https://www.youtube.com/results?search_query=dysarthria+speech+therapy+exercises+for+adults",
+  },
+  {
+    id: "r2",
+    title: "Stuttering fluency shaping exercises (search)",
+    category: "Stuttering",
+    url: "https://www.youtube.com/results?search_query=stuttering+fluency+shaping+exercises",
+  },
+  {
+    id: "r3",
+    title: "Breathing exercises for speech clarity (search)",
+    category: "General",
+    url: "https://www.youtube.com/results?search_query=breathing+exercises+for+speech+therapy",
+  },
+  {
+    id: "r4",
+    title: "Articulation drills speech therapy (search)",
+    category: "General",
+    url: "https://www.youtube.com/results?search_query=articulation+drills+speech+therapy",
+  },
+  {
+    id: "r5",
+    title: "Smooth speech technique training (search)",
+    category: "Stuttering",
+    url: "https://www.youtube.com/results?search_query=smooth+speech+technique+stuttering+practice",
+  },
+];
 
 export default function TherapyHub() {
   const [selectedCategory, setSelectedCategory] = useState("All Skills");
+  const [isPracticePlaying, setIsPracticePlaying] = useState(false);
   const [exercises] = useState<Exercise[]>([
     {
       id: "1",
@@ -23,12 +66,14 @@ export default function TherapyHub() {
       description: "Practice holding vowel sounds to improve breath control and speech clarity.",
       category: "Dysarthria",
       type: "WW41",
+      youtubeUrl: "https://www.youtube.com/results?search_query=vowel+prolongation+speech+therapy",
     },
     {
       id: "2",
       title: "Breath Control Exercises",
       description: "Enhance breath support and control for clearer and more consistent speech.",
       category: "Dysarthria",
+      youtubeUrl: "https://www.youtube.com/results?search_query=breath+control+speech+therapy+exercises",
     },
     {
       id: "3",
@@ -36,24 +81,28 @@ export default function TherapyHub() {
       description: "Work on precise articulation of difficult sounds for better speech clarity.",
       category: "Dysarthria",
       type: "[11] 41",
+      youtubeUrl: "https://www.youtube.com/results?search_query=articulation+drills+speech+therapy+adults",
     },
     {
       id: "4",
       title: "Rhythm & Rate Drills",
       description: "Practice pacing and rhythm to improve the fluency and naturalness of speech.",
       category: "Dysarthria",
+      youtubeUrl: "https://www.youtube.com/results?search_query=speech+rate+control+exercises+therapy",
     },
     {
       id: "5",
       title: "Smooth Speech Exercises",
       description: "Develop techniques for smoother, more fluent speech with reduced stuttering.",
       category: "Stuttering",
+      youtubeUrl: "https://www.youtube.com/results?search_query=smooth+speech+stuttering+exercises",
     },
     {
       id: "6",
       title: "Sentence Repetition",
       description: "Repeat sentences to improve clarity and speech muscle coordination.",
       category: "Dysarthria",
+      youtubeUrl: "https://www.youtube.com/results?search_query=sentence+repetition+speech+therapy+practice",
     },
   ]);
 
@@ -61,6 +110,15 @@ export default function TherapyHub() {
     selectedCategory === "All Skills"
       ? exercises
       : exercises.filter((e) => e.category === selectedCategory);
+
+  const filteredResources = useMemo(() => {
+    if (selectedCategory === "All Skills") {
+      return YOUTUBE_RESOURCES;
+    }
+    return YOUTUBE_RESOURCES.filter(
+      (item) => item.category === selectedCategory || item.category === "General"
+    );
+  }, [selectedCategory]);
 
   return (
     <div className="therapy-layout">
@@ -75,17 +133,27 @@ export default function TherapyHub() {
         </div>
 
         <div className="therapy-filters">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="filter-dropdown"
+          <InteractiveButton
+            variant={selectedCategory === "All Skills" ? "primary" : "ghost"}
+            onClick={() => setSelectedCategory("All Skills")}
           >
-            <option>All Skills</option>
-            <option>Dysarthria</option>
-            <option>Stuttering</option>
-          </select>
-
-          <button className="clear-filters">Clear Filters</button>
+            All
+          </InteractiveButton>
+          <InteractiveButton
+            variant={selectedCategory === "Dysarthria" ? "primary" : "ghost"}
+            onClick={() => setSelectedCategory("Dysarthria")}
+          >
+            Dysarthria
+          </InteractiveButton>
+          <InteractiveButton
+            variant={selectedCategory === "Stuttering" ? "primary" : "ghost"}
+            onClick={() => setSelectedCategory("Stuttering")}
+          >
+            Stuttering
+          </InteractiveButton>
+          <InteractiveButton className="clear-filters" variant="ghost" onClick={() => setSelectedCategory("All Skills")}>
+            Clear Filters
+          </InteractiveButton>
         </div>
 
         <div className="filters-tags">
@@ -93,23 +161,48 @@ export default function TherapyHub() {
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
             </svg>
-            All Skills
+            {selectedCategory}
           </span>
-          {selectedCategory !== "All Skills" && (
-            <span className="tag">
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
-              </svg>
-              {selectedCategory}
-            </span>
-          )}
         </div>
 
+        <section className="video-resources">
+          <h2>YouTube Practice Resources</h2>
+          <p>Open any resource to practice with guided videos on YouTube.</p>
+          <div className="resource-grid">
+            {filteredResources.map((resource) => (
+              <a key={resource.id} href={resource.url} target="_blank" rel="noreferrer" className="resource-link">
+                <span>{resource.title}</span>
+                <small>{resource.category}</small>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section className="practice-controls">
+          <h2>Live Practice Session</h2>
+          <p>Use this mini session control while following any drill.</p>
+          <div className="practice-actions">
+            <InteractiveButton
+              variant={isPracticePlaying ? "danger" : "primary"}
+              onClick={() => setIsPracticePlaying((v) => !v)}
+            >
+              {isPracticePlaying ? "Pause Session" : "Play Session"}
+            </InteractiveButton>
+            <InteractiveButton variant="ghost" onClick={() => setIsPracticePlaying(false)}>
+              Reset
+            </InteractiveButton>
+          </div>
+        </section>
+
         <div className="exercises-grid">
-          {filteredExercises.map((exercise) => (
-            <div key={exercise.id} className="exercise-card">
+          {filteredExercises.map((exercise, index) => (
+            <div key={exercise.id} className="exercise-card" style={{ animationDelay: `${index * 0.06}s` }}>
               <div className="card-header">
-                <span className={`category-badge dysarthria`}>
+                <span
+                  className={`category-badge ${
+                    exercise.category === "Stuttering" ? "stuttering" : "dysarthria"
+                  }`}
+                >
                   {exercise.category}
                 </span>
               </div>
@@ -128,7 +221,16 @@ export default function TherapyHub() {
                 )}
               </div>
 
-              <button className="btn-start-exercise">Start Exercise</button>
+              <div className="exercise-actions">
+                <InteractiveButton className="btn-start-exercise">
+                  Start Exercise
+                </InteractiveButton>
+                {exercise.youtubeUrl && (
+                  <a href={exercise.youtubeUrl} target="_blank" rel="noreferrer" className="btn-watch-video">
+                    Watch Video
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -136,4 +238,3 @@ export default function TherapyHub() {
     </div>
   );
 }
-

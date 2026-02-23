@@ -15,6 +15,30 @@ export interface AuthResponse {
   };
 }
 
+export interface UserProfile {
+  id: number;
+  email: string;
+  full_name?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  location?: string | null;
+  occupation?: string | null;
+  primary_goal?: string | null;
+  bio?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserProfileUpdatePayload {
+  full_name?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  location?: string | null;
+  occupation?: string | null;
+  primary_goal?: string | null;
+  bio?: string | null;
+}
+
 export interface AnalysisResult {
   id: number;
   audio_id: string;
@@ -48,6 +72,11 @@ export interface HistoryItem {
   stuttering_probability: number;
   grammar_score: number;
   created_at: string;
+}
+
+export interface ChatMessagePayload {
+  role: "user" | "assistant";
+  text: string;
 }
 
 // Helper function to get authorization header
@@ -105,6 +134,42 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || "Login failed");
+  }
+
+  return response.json();
+}
+
+export async function getUserProfile(): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/profile`, {
+    method: "GET",
+    headers: {
+      ...getAuthHeader(),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to fetch profile");
+  }
+
+  return response.json();
+}
+
+export async function updateUserProfile(
+  payload: UserProfileUpdatePayload
+): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/profile`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to update profile");
   }
 
   return response.json();
@@ -223,5 +288,29 @@ export async function checkHealth(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ============ CHAT ENDPOINTS ============
+
+export async function sendChatMessage(
+  message: string,
+  history: ChatMessagePayload[]
+): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify({ message, history }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to get AI response");
+  }
+
+  const data = await response.json();
+  return data.reply as string;
 }
 

@@ -625,3 +625,379 @@ A: In current implementation it is grammar-error probability; naming should be a
 
 Q: How do you handle model failure?  
 A: Stage-level try/except fallbacks return safe defaults; fatal issues set analysis status to failed with error message.
+
+## 20. Model Evaluation Metrics (How They Are Calculated)
+This section explains the standard validation metrics used in `ml/evaluation/validate_accuracy.py`.
+
+### 20.1 Confusion matrix terms (binary dysarthria classification)
+For this project, treat **dysarthria** as the positive class.
+- TP (True Positive): model predicts dysarthria and actual label is dysarthria
+- TN (True Negative): model predicts healthy and actual label is healthy
+- FP (False Positive): model predicts dysarthria but actual label is healthy
+- FN (False Negative): model predicts healthy but actual label is dysarthria
+
+Confusion matrix shape (binary):
+```
+[[TN, FP],
+ [FN, TP]]
+```
+
+### 20.2 Accuracy
+Definition: fraction of all samples predicted correctly.
+
+Formula:
+- `Accuracy = (TP + TN) / (TP + TN + FP + FN)`
+
+Interpretation:
+- High accuracy means overall correctness is high, but it can be misleading when classes are imbalanced.
+
+### 20.3 Precision
+Definition: out of all samples predicted as dysarthria, how many were truly dysarthria.
+
+Formula:
+- `Precision = TP / (TP + FP)`
+
+Interpretation:
+- High precision means fewer false alarms (fewer healthy samples incorrectly flagged as dysarthria).
+
+### 20.4 Recall (Sensitivity / True Positive Rate)
+Definition: out of all true dysarthria samples, how many the model correctly found.
+
+Formula:
+- `Recall = TP / (TP + FN)`
+
+Interpretation:
+- High recall means fewer missed dysarthria cases.
+
+### 20.5 F1 Score
+Definition: harmonic mean of precision and recall.
+
+Formula:
+- `F1 = 2 * (Precision * Recall) / (Precision + Recall)`
+
+Interpretation:
+- Useful when you need a balance between false positives and false negatives.
+
+### 20.6 Specificity (True Negative Rate)
+Definition: out of all true healthy samples, how many were correctly identified as healthy.
+
+Formula:
+- `Specificity = TN / (TN + FP)`
+
+Interpretation:
+- Complements recall by showing performance on the negative class.
+
+### 20.7 False Positive Rate (FPR) and False Negative Rate (FNR)
+Formulas:
+- `FPR = FP / (FP + TN) = 1 - Specificity`
+- `FNR = FN / (FN + TP) = 1 - Recall`
+
+Interpretation:
+- FPR captures false alarms.
+- FNR captures missed dysarthria detections.
+
+### 20.8 ROC-AUC (when probability outputs are used)
+Definition: area under ROC curve (TPR vs FPR across thresholds).
+
+Notes:
+- Requires probability scores (e.g., `predict_proba`) rather than only hard labels.
+- Values range from 0 to 1:
+  - `0.5` approx random
+  - closer to `1.0` is better separation
+
+### 20.9 PR-AUC (Precision-Recall AUC)
+Definition: area under precision-recall curve across thresholds.
+
+Notes:
+- Especially informative for imbalanced datasets.
+- Focuses on positive-class retrieval quality.
+
+### 20.10 Macro, micro, and weighted averaging (multi-class/general reporting)
+`classification_report` can show these averages:
+- Macro average: unweighted mean across classes
+  - treats each class equally
+- Weighted average: class-frequency-weighted mean
+  - influenced by majority class
+- Micro average: computes global TP/FP/FN across all classes before metric calculation
+  - equivalent to accuracy in some settings
+
+### 20.11 Metrics currently computed in this project script
+File: `ml/evaluation/validate_accuracy.py`
+
+The script currently computes and prints:
+- `accuracy_score`
+- `precision_score`
+- `recall_score`
+- `f1_score`
+- `confusion_matrix`
+- `classification_report`
+
+Current implementation details:
+- Uses predicted labels from `model.predict(x)` (single threshold behavior from model)
+- Uses `zero_division=0` to avoid division-by-zero crashes when a class has no predicted positives
+- Optionally exports JSON report with core metrics via `--save-json`
+
+### 20.12 Why multiple metrics are required
+No single metric is sufficient:
+- Accuracy gives global correctness
+- Precision controls false alarms
+- Recall controls missed dysarthria detections
+- F1 balances precision/recall
+- Confusion matrix reveals exact error pattern
+
+For viva/defense, report at least:
+- Accuracy, Precision, Recall, F1
+- Confusion Matrix
+- (Recommended) ROC-AUC and PR-AUC when probability outputs are available
+
+## 21. Module-Oriented Project Architecture (3 Modules)
+This section reframes SpeechWell into the required three-module design.
+
+## 21.1 Module 1: Audio Capture, Extraction, and Preprocessing
+Scope:
+- Audio upload (file-based)
+- Live audio recording (browser microphone)
+- Audio normalization and standardization
+- Core feature extraction inputs for downstream analytics
+
+Primary files:
+- Frontend:
+  - `speechwell-frontend/src/pages/Upload.tsx`
+  - `speechwell-frontend/src/api/api.ts`
+- Backend orchestration:
+  - `backend/app/main.py` (`/api/analyze`, `normalize_audio`)
+- Feature extraction:
+  - `ml/feature_extraction/extract_whisper.py`
+  - `ml/feature_extraction/extract_acoustic.py`
+
+Step-by-step process:
+1. User uploads/records audio in frontend.
+2. Frontend sends multipart request to `POST /api/analyze`.
+3. Backend validates format (wav/mp3/webm/ogg/m4a).
+4. Backend stores original file to `storage/uploaded_audio/`.
+5. Backend normalizes audio using FFmpeg:
+   - mono conversion and 16kHz resampling.
+6. Backend stores processed WAV in `storage/processed_audio/`.
+7. Feature extraction begins:
+   - Whisper transcript + timing segments.
+   - Wav2Vec2 acoustic embedding.
+
+Core equations (Module 1):
+- Segment duration:
+  - `dur_i = end_i - start_i`
+- Total duration:
+  - `total_duration_sec = sum(dur_i)`
+- Pause between segments:
+  - `pause_i = max(0, start_i - end_(i-1))`
+- Speaking rate:
+  - `speaking_rate_wps = total_words / total_duration_sec`
+- Average pause:
+  - `average_pause_sec = mean(pause_i)`
+- Max pause:
+  - `max_pause_sec = max(pause_i)`
+
+Module 1 output:
+- transcript
+- segment timestamps
+- speaking-rate and pause metrics
+- acoustic embedding vector
+- normalized audio artifact for reproducible inference
+
+## 21.2 Module 2: Rule-Based + Model-Based Speech Intelligence
+Scope:
+- Dysarthria classification (ML model)
+- Stuttering estimation (rule-based)
+- Grammar correction and grammar-error probability
+- Phonological error estimation (rule-based)
+- Consolidated inference decision payload
+
+Primary files:
+- Orchestration:
+  - `ml/services/speech_analysis_service.py`
+- Model-based:
+  - `backend/app/services/dysarthria_inference_service.py`
+  - `backend/app/services/grammar_service.py`
+- Rule-based:
+  - `backend/app/services/stuttering_service.py`
+  - `backend/app/services/phonological_service.py`
+
+Step-by-step process:
+1. Module 2 receives Module 1 outputs.
+2. Dysarthria path:
+   - scale acoustic embedding
+   - apply PCA
+   - concatenate with fluency features
+   - run logistic regression probability inference
+3. Stuttering path:
+   - detect repetitions, prolongations, and speech blocks
+   - compute weighted stuttering probability
+4. Grammar path:
+   - run seq2seq grammar correction model
+   - compare original and corrected token patterns
+   - estimate grammar-error probability and corrected text
+5. Phonological path:
+   - use CMU pronunciation lookups and substitution rules
+   - compute phonological error probability
+6. Aggregate all scores and details into one analysis object.
+
+Core equations (Module 2):
+- Dysarthria probability from classifier:
+  - `p_dys = model.predict_proba(X)[0][1]`
+- Dysarthria label:
+  - `label = "dysarthria" if p_dys >= 0.5 else "healthy"`
+
+- Stuttering composite:
+  - `raw_stutter = 0.4*repetitions + 0.4*prolongations + 0.2*blocks`
+  - `stuttering_probability = min(raw_stutter / 5, 1.0)`
+
+- Grammar error estimator:
+  - `diff = abs(len(original_words) - len(corrected_words))`
+  - `error_estimate = max(diff, int(0.05 * len(original_words)))`
+  - `grammar_error_probability = min(error_estimate / max(len(original_words), 1), 1.0)`
+
+- Phonological error probability:
+  - `phonological_error_probability = min(error_count / max(word_count, 1), 1.0)`
+
+Module 2 output:
+- dysarthria probability + label
+- stuttering probability + event counts
+- grammar error probability + corrected transcript
+- phonological error probability + affected tokens
+
+## 21.3 Module 3: Progress Tracking, Reporting, and Training Support
+Scope:
+- Persistent storage of analysis results
+- Dashboard analytics and historical progress tracking
+- Downloadable PDF report generation
+- Therapy/training resources (videos/exercises)
+
+Primary files:
+- Backend persistence and reports:
+  - `backend/app/main.py`
+  - `backend/app/database/models.py`
+  - `backend/app/services/pdf_report_service.py`
+- Frontend progress/report/training:
+  - `speechwell-frontend/src/pages/Dashboard.tsx`
+  - `speechwell-frontend/src/pages/History.tsx`
+  - `speechwell-frontend/src/pages/Reports.tsx`
+  - `speechwell-frontend/src/pages/TherapyHub.tsx`
+
+Step-by-step process:
+1. Module 3 receives finalized analysis payload from Module 2.
+2. Backend updates `analyses` table with all computed fields and status.
+3. Backend generates PDF report and stores it in `storage/reports/`.
+4. Frontend fetches:
+   - current analysis (`/api/analyze/{audio_id}`)
+   - history (`/api/analyses`)
+   - report binary (`/api/reports/{audio_id}`)
+5. Dashboard and history pages compute trends and risk summaries.
+6. Therapy Hub recommends curated speech training exercises/videos.
+
+Core equations (Module 3 UI-level):
+- Dashboard average dysarthria (%):
+  - `avgDysarthria = round(mean(dysarthria_probability) * 100)`
+- Dashboard average stuttering (%):
+  - `avgStuttering = round(mean(stuttering_probability) * 100)`
+- Dashboard grammar display (%):
+  - `avgGrammar = round(mean(grammar_score) * 100)`
+
+- Results page overall score:
+  - `overallScore = round(((1 - dysarthria_probability)*0.33 + (1 - stuttering_probability)*0.33 + grammar_score*0.34) * 100)`
+
+Severity threshold logic (reporting bands):
+- LOW: `< 0.30`
+- MODERATE: `0.30 to < 0.60`
+- HIGH: `>= 0.60`
+
+Module 3 output:
+- longitudinal progress view
+- downloadable PDF evidence/report
+- training guidance for continuous improvement
+
+## 21.4 Complete Architecture in Mermaid (Module-Based)
+```mermaid
+flowchart TB
+    U[User] --> FE[React Frontend]
+
+    subgraph M1[Module 1: Audio Capture, Extraction, Preprocessing]
+        M1A[Upload or Live Record]
+        M1B[POST /api/analyze]
+        M1C[File Validation]
+        M1D[Store Original Audio]
+        M1E[FFmpeg Normalize<br/>mono + 16kHz]
+        M1F[Whisper Features<br/>transcript + segments + pauses]
+        M1G[Wav2Vec2 Embedding<br/>acoustic vector]
+    end
+
+    subgraph M2[Module 2: Rule-Based + Model-Based Intelligence]
+        M2A[Dysarthria Path<br/>Scaler + PCA + Logistic Regression]
+        M2B[Stuttering Rules<br/>repetition/prolongation/block]
+        M2C[Grammar Correction Model<br/>error probability]
+        M2D[Phonological Rules<br/>substitution checks]
+        M2E[Unified Decision Payload]
+    end
+
+    subgraph M3[Module 3: Progress Tracking, Reports, Training]
+        M3A[(SQLite: users + analyses)]
+        M3B[PDF Report Generator]
+        M3C[(storage/reports)]
+        M3D[Dashboard + History + Reports]
+        M3E[Therapy Hub<br/>training videos/exercises]
+    end
+
+    U --> M1A
+    FE --> M1A
+    M1A --> M1B --> M1C --> M1D --> M1E
+    M1E --> M1F
+    M1E --> M1G
+
+    M1F --> M2A
+    M1G --> M2A
+    M1F --> M2B
+    M1F --> M2C
+    M1F --> M2D
+
+    M2A --> M2E
+    M2B --> M2E
+    M2C --> M2E
+    M2D --> M2E
+
+    M2E --> M3A
+    M2E --> M3B
+    M3B --> M3C
+
+    M3A --> M3D
+    M3C --> M3D
+    M3D --> FE
+    M3E --> FE
+```
+
+## 21.5 Module-Wise Sequence (Step-by-Step Mermaid)
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Module1 as Module 1
+    participant Module2 as Module 2
+    participant Module3 as Module 3
+    participant DB as SQLite
+    participant Storage as Report Storage
+
+    User->>Frontend: Upload/Record speech
+    Frontend->>Backend: POST /api/analyze (audio)
+    Backend->>Module1: Validate + normalize + extract features
+    Module1-->>Backend: transcript + timing + embedding
+
+    Backend->>Module2: Run model/rule decisions
+    Module2-->>Backend: dysarthria/stuttering/grammar/phonology scores
+
+    Backend->>DB: Save analysis results and status
+    Backend->>Module3: Generate PDF + prepare progress data
+    Module3->>Storage: Save report file
+
+    Frontend->>Backend: GET analysis/history/report
+    Backend->>DB: Fetch stored records
+    Backend->>Storage: Fetch report binary
+    Backend-->>Frontend: Results + progress + downloadable PDF
+```

@@ -1,0 +1,181 @@
+/* File Logic Summary: Analytics dashboard styles with responsive cards, animated progress bars, and interactive panels. */
+
+.analytics-layout {
+  display: flex;
+  margin-top: var(--nav-h);
+}
+
+.analytics-content {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  padding: clamp(1rem, 2.8vw, 1.9rem);
+  min-height: calc(100vh - var(--nav-h));
+}
+
+.analytics-header {
+  margin-bottom: 1rem;
+}
+
+.analytics-header h1 {
+  color: var(--text-strong);
+}
+
+.period-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.analytics-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.analytics-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  padding: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.analytics-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: var(--shadow-sm);
+}
+
+.analytics-card h3 {
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  color: var(--text-strong);
+}
+
+.analytics-card p {
+  font-size: clamp(0.86rem, 1.4vw, 1rem);
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.panel h2 {
+  color: var(--text-strong);
+  margin-bottom: 0.75rem;
+}
+
+.weekly-bars,
+.skill-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.weekly-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.weekly-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #ddd8ee;
+  overflow: hidden;
+}
+
+.weekly-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+  animation: growBar 0.8s ease both;
+}
+
+.skill-row {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.skill-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.achievements {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.7rem;
+}
+
+.achievement-item {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.85rem;
+  background: #fff;
+}
+
+.achievement-item .earned,
+.achievement-item .progress {
+  display: inline-block;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.achievement-item .earned {
+  color: #1f7f51;
+  background: #e9f9f0;
+}
+
+.achievement-item .progress {
+  color: #8d5a17;
+  background: #fff2df;
+}
+
+.analytics-state {
+  color: var(--text-muted);
+}
+
+.analytics-error {
+  color: #b22d57;
+}
+
+@keyframes growBar {
+  from {
+    width: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .analytics-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .achievements {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 1120px) {
+  .analytics-content {
+    margin-left: 88px;
+  }
+}
+
+@media (max-width: 860px) {
+  .analytics-content {
+    margin-left: 0;
+    padding-bottom: 92px;
+  }
+}
+

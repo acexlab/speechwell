@@ -11,12 +11,6 @@ export default function Navbar() {
   const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
   const isAuthenticated = !!localStorage.getItem("accessToken");
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  };
-
   return (
     <nav className={`navbar ${isLandingPage ? "landing" : "default"}`}>
       <div className="navbar-brand">
@@ -25,18 +19,7 @@ export default function Navbar() {
         </Link>
       </div>
 
-      <div className="navbar-links">
-        {!isLandingPage && isAuthenticated && (
-          <>
-            <Link to="/upload" className="nav-link">
-              Upload
-            </Link>
-            <Link to="/history" className="nav-link">
-              History
-            </Link>
-          </>
-        )}
-      </div>
+      <div className="navbar-links" />
 
       <div className="navbar-auth">
         {!isAuthPage && !isAuthenticated ? (
@@ -48,10 +31,6 @@ export default function Navbar() {
               Register
             </Link>
           </>
-        ) : isAuthenticated ? (
-          <button onClick={handleLogout} className="btn-register">
-            Logout
-          </button>
         ) : null}
       </div>
     </nav>

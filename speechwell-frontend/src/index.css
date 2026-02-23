@@ -1,106 +1,203 @@
-/* File Logic Summary: Stylesheet controlling visual presentation; it affects UI clarity but not scoring algorithms. */
+/* File Logic Summary: Global design system tokens, base typography, reset, and accessibility motion rules for the frontend UI. */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --font-body: 'Manrope', 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', 'Manrope', sans-serif;
 
-  color-scheme: light;
-  color: #333;
-  background-color: #fff;
+  --bg-0: #f2f0fb;
+  --bg-1: #ece9f8;
+  --surface: #ffffff;
+  --surface-soft: #f8f7ff;
+  --text-strong: #171449;
+  --text-muted: #625d8b;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  --primary: #2d0c7a;
+  --primary-strong: #230861;
+  --primary-soft: #ede6ff;
+
+  --accent: #ff7b32;
+  --accent-soft: #ffe8d9;
+
+  --warn: #e26d3d;
+  --success: #2a9d66;
+  --danger: #cc3d4a;
+
+  --border: #d9d4eb;
+  --shadow-sm: 0 8px 20px rgba(38, 19, 99, 0.08);
+  --shadow-md: 0 16px 36px rgba(38, 19, 99, 0.14);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --nav-h: 72px;
+  --sidebar-w: 280px;
+}
+
+:root[data-theme="ocean"] {
+  --bg-0: #eaf5ff;
+  --bg-1: #d9e9fb;
+  --surface-soft: #f4f9ff;
+  --text-strong: #0f2d4c;
+  --text-muted: #4f6d89;
+  --primary: #0e4f90;
+  --primary-strong: #0a3e72;
+  --primary-soft: #e1efff;
+  --accent: #138d9f;
+  --accent-soft: #dffbff;
+  --border: #c9dcee;
+}
+
+:root[data-theme="sunset"] {
+  --bg-0: #fff2ec;
+  --bg-1: #fde6dc;
+  --surface-soft: #fff8f4;
+  --text-strong: #4a1f12;
+  --text-muted: #845344;
+  --primary: #b4451d;
+  --primary-strong: #913717;
+  --primary-soft: #ffe4d8;
+  --accent: #8a2be2;
+  --accent-soft: #f2e7ff;
+  --border: #efd2c3;
+}
+
+:root[data-theme="forest"] {
+  --bg-0: #e9f4ee;
+  --bg-1: #d7ebe0;
+  --surface-soft: #f3fbf6;
+  --text-strong: #173d2c;
+  --text-muted: #486c5a;
+  --primary: #1e6a45;
+  --primary-strong: #175438;
+  --primary-soft: #def4e7;
+  --accent: #2a9d66;
+  --accent-soft: #def8e8;
+  --border: #c6e2d2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--text-strong);
+  background:
+    radial-gradient(840px 360px at 88% -8%, #e4ddff 0%, rgba(228, 221, 255, 0) 68%),
+    radial-gradient(720px 320px at 2% 24%, #fbe5d8 0%, rgba(251, 229, 216, 0) 68%),
+    linear-gradient(140deg, var(--bg-0), var(--bg-1));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  font-weight: 500;
-  color: #0052a3;
-  text-decoration: inherit;
+  color: var(--primary);
+  text-decoration: none;
 }
 
 a:hover {
-  color: #003d82;
+  color: var(--primary-strong);
 }
 
-body {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-#root {
-  width: 100%;
-  margin: 0 auto;
-  padding: 0;
+  letter-spacing: -0.01em;
 }
 
 h1 {
-  font-size: 3.2em;
+  font-size: clamp(1.85rem, 2.8vw, 2.8rem);
   line-height: 1.1;
 }
 
 h2 {
-  font-size: 2em;
-  line-height: 1.1;
+  font-size: clamp(1.35rem, 2.1vw, 2.05rem);
+  line-height: 1.15;
 }
 
 h3 {
-  font-size: 1.5em;
-  line-height: 1.1;
+  font-size: clamp(1.05rem, 1.5vw, 1.32rem);
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 button {
-  border-radius: 6px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0.62rem 1.15rem;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
-button:active {
+button:active:not(:disabled) {
   transform: translateY(0);
 }
 
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 input,
+select,
 textarea {
-  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text-strong);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(45, 12, 122, 0.2);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
-
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-

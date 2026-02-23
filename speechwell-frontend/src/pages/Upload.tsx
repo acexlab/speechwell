@@ -5,6 +5,7 @@ File Logic Summary: Upload/record page. It handles drag-drop, live recording, va
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import InteractiveButton from "../components/InteractiveButton";
 import { uploadAndAnalyzeAudio } from "../api/api";
 import "../styles/upload.css";
 
@@ -280,21 +281,23 @@ export default function Upload() {
             </div>
 
             {isRecording ? (
-              <button
+              <InteractiveButton
                 className="btn-recording active"
                 onClick={handleStopRecording}
                 disabled={isUploading}
+                variant="danger"
               >
                 Stop Recording
-              </button>
+              </InteractiveButton>
             ) : (
-              <button
+              <InteractiveButton
                 className="btn-recording"
                 onClick={handleStartRecording}
                 disabled={isUploading}
+                variant="primary"
               >
                 Start Recording
-              </button>
+              </InteractiveButton>
             )}
 
             <p className="recording-note">Please allow microphone access.</p>
@@ -332,13 +335,13 @@ export default function Upload() {
               <p className="progress-text">Processing your analysis...</p>
             )}
             {!isUploading && uploadProgress === 0 && (
-              <button
+              <InteractiveButton
                 className="btn-upload"
                 onClick={handleUpload}
                 disabled={!selectedFile}
               >
                 Analyze Audio
-              </button>
+              </InteractiveButton>
             )}
           </div>
         )}

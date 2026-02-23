@@ -1,0 +1,197 @@
+/* File Logic Summary: AI chat interface styles with animated bubbles, typing indicator, and responsive input controls. */
+
+.chat-layout {
+  display: flex;
+  margin-top: var(--nav-h);
+}
+
+.chat-content {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  padding: clamp(1rem, 2.8vw, 1.9rem);
+  min-height: calc(100vh - var(--nav-h));
+}
+
+.chat-header {
+  margin-bottom: 1rem;
+}
+
+.chat-header h1 {
+  color: var(--text-strong);
+}
+
+.chat-shell {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  min-height: 72vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+}
+
+.chat-bubble {
+  max-width: 85%;
+  border-radius: 14px;
+  padding: 0.72rem 0.85rem;
+  font-size: clamp(0.9rem, 1.3vw, 1rem);
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  animation: msgIn 0.25s ease both;
+  transition: transform 0.2s ease;
+}
+
+.chat-bubble:hover {
+  transform: scale(1.02);
+}
+
+.chat-bubble.user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  color: #fff;
+  border-color: transparent;
+}
+
+.chat-bubble.assistant {
+  align-self: flex-start;
+  background: #fff;
+  color: var(--text-strong);
+}
+
+.chat-bubble.typing {
+  display: inline-flex;
+  gap: 0.34rem;
+  align-items: center;
+}
+
+.chat-bubble.typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #8f8bb3;
+  animation: typingPulse 1s infinite;
+}
+
+.chat-bubble.typing span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.chat-bubble.typing span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+.chat-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.chat-controls input {
+  flex: 1;
+  padding: 0.65rem 0.72rem;
+  border-radius: 12px;
+}
+
+.mic-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: #fff;
+  color: var(--primary);
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.mic-button svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.mic-button:hover {
+  transform: scale(1.1);
+}
+
+.mic-button.recording {
+  color: #cf3d4f;
+}
+
+.recording-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #cf3d4f;
+  animation: recPulse 1s infinite;
+}
+
+@keyframes msgIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes typingPulse {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes recPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(207, 61, 79, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(207, 61, 79, 0);
+  }
+}
+
+@media (min-width: 1024px) {
+  .chat-bubble {
+    max-width: 80%;
+  }
+
+  .chat-controls {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 1120px) {
+  .chat-content {
+    margin-left: 88px;
+  }
+}
+
+@media (max-width: 860px) {
+  .chat-content {
+    margin-left: 0;
+    padding-bottom: 92px;
+  }
+}
+

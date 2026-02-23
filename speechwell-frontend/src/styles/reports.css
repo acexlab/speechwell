@@ -1,0 +1,43 @@
+/* File Logic Summary: Reports page styling for header layout and refresh placement while reusing shared table classes. */
+
+.dashboard-layout {
+  display: flex;
+  margin-top: var(--nav-h);
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  padding: clamp(1rem, 2.5vw, 1.8rem);
+  min-height: calc(100vh - var(--nav-h));
+}
+
+.dashboard-header {
+  margin-bottom: 1rem;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.header-subtitle {
+  margin-top: 0.3rem;
+}
+
+@media (max-width: 1120px) {
+  .dashboard-content {
+    margin-left: 88px;
+  }
+}
+
+@media (max-width: 860px) {
+  .dashboard-content {
+    margin-left: 0;
+    padding-bottom: 92px;
+  }
+}
+

@@ -4,6 +4,10 @@ File Logic Summary: FastAPI entrypoint. It validates uploads, normalizes audio, 
 
 import os
 import sys
+try:
+    from dotenv import load_dotenv  # type: ignore
+except Exception:  # pragma: no cover
+    load_dotenv = None
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends
 from fastapi.responses import FileResponse
@@ -14,6 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+if load_dotenv is not None:
+    load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 from backend.app.database.db import engine, SessionLocal
 from backend.app.database.models import Base, Analysis, User
@@ -23,7 +29,9 @@ from backend.app.services.auth_service import (
 )
 from backend.app.schemas import (
     UserRegister, UserLogin, TokenResponse,
-    AnalysisDetailResponse, HistoryResponse
+    AnalysisDetailResponse, HistoryResponse,
+    UserProfileUpdate, UserProfileResponse,
+    ChatRequest, ChatResponse,
 )
 
 import shutil
@@ -34,6 +42,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from requests import RequestException
 
 app = FastAPI(title="SpeechWell API")
 
@@ -75,6 +84,12 @@ def ensure_sqlite_schema_compatibility():
         ],
         "users": [
             ("full_name", "VARCHAR"),
+            ("age", "INTEGER"),
+            ("gender", "VARCHAR"),
+            ("location", "VARCHAR"),
+            ("occupation", "VARCHAR"),
+            ("primary_goal", "VARCHAR"),
+            ("bio", "TEXT"),
             ("updated_at", "DATETIME"),
         ],
     }
@@ -213,6 +228,38 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
             "full_name": user.full_name
         }
     )
+
+
+@app.get("/api/profile", response_model=UserProfileResponse)
+def get_profile(current_user: Optional[User] = Depends(get_current_user)):
+    """Get logged-in user's profile details."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return current_user
+
+
+@app.put("/api/profile", response_model=UserProfileResponse)
+def update_profile(
+    profile_data: UserProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """Update logged-in user's editable profile fields."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    current_user.full_name = profile_data.full_name
+    current_user.age = profile_data.age
+    current_user.gender = profile_data.gender
+    current_user.location = profile_data.location
+    current_user.occupation = profile_data.occupation
+    current_user.primary_goal = profile_data.primary_goal
+    current_user.bio = profile_data.bio
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 
 @app.post("/api/analyze", response_model=AnalysisDetailResponse)
@@ -423,4 +470,26 @@ def download_report(
 def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "SpeechWell API"}
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+def chat_with_ai(
+    payload: ChatRequest,
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    """SpeechWell AI coach endpoint backed by Gemini."""
+    try:
+        from backend.app.services.chat_service import generate_chat_reply
+
+        history = [{"role": m.role, "text": m.text} for m in payload.history]
+        reply = generate_chat_reply(payload.message, history)
+        return ChatResponse(reply=reply)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Chat provider request failed: {e}")
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to generate AI response")
 

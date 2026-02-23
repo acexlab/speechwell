@@ -2,87 +2,123 @@
 File Logic Summary: Shared UI component used across pages to provide consistent navigation and layout behavior.
 */
 
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../styles/sidebar.css";
 
 export default function Sidebar() {
   const location = useLocation();
-
+  const navigate = useNavigate();
   const isActive = (path: string) => location.pathname === path;
+
+  const userRaw = localStorage.getItem("user");
+  let userName = "Guest User";
+
+  if (userRaw) {
+    try {
+      const parsed = JSON.parse(userRaw);
+      const emailName = parsed?.email?.split("@")[0];
+      if (emailName) {
+        userName = emailName;
+      }
+    } catch {
+      userName = "Guest User";
+    }
+  }
+
+  const userInitial = userName.slice(0, 1).toUpperCase();
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-header">
-        <Link to="/dashboard" className="sidebar-logo">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="logo-icon">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-          </svg>
+      <div className="sidebar-top">
+        <div className="sidebar-brand">
+          <div className="brand-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+            </svg>
+          </div>
           <span>SpeechWell</span>
-        </Link>
+        </div>
+
+        <div className="sidebar-search">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 10-.71.71l.27.28v.79L20 21.49 21.49 20 15.5 14zM10 15a5 5 0 110-10 5 5 0 010 10z" />
+          </svg>
+          <input type="text" placeholder="Search..." aria-label="Search navigation" />
+        </div>
       </div>
 
       <nav className="sidebar-nav">
-        <Link
-          to="/dashboard"
-          className={`nav-item ${isActive("/dashboard") ? "active" : ""}`}
-        >
+        <Link to="/dashboard" className={`nav-item ${isActive("/dashboard") ? "active" : ""}`}>
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 13h2v8H3zm4-8h2v16H7zm4-2h2v18h-2zm4-2h2v20h-2zm4-2h2v22h-2z" />
           </svg>
           <span>Dashboard</span>
         </Link>
 
-        <Link
-          to="/upload"
-          className={`nav-item ${isActive("/upload") ? "active" : ""}`}
-        >
+        <Link to="/upload" className={`nav-item ${isActive("/upload") ? "active" : ""}`}>
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 5.23 11.08 5 12 5c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 15.5 24 14.08 24 12.5c0-2.64-2.05-4.78-4.65-4.96zM16.5 16.5H13v3h-2v-3H8.5l4-4 4 4z" />
+            <path d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3zm-7 9v1a7 7 0 006 6.93V21h2v-2.07A7 7 0 0019 12v-1h-2v1a5 5 0 01-10 0v-1H5z" />
           </svg>
-          <span>New Analysis</span>
+          <span>Speech Analysis</span>
         </Link>
 
-        <Link
-          to="/therapy-hub"
-          className={`nav-item ${isActive("/therapy-hub") ? "active" : ""}`}
-        >
+        <Link to="/therapy-hub" className={`nav-item ${isActive("/therapy-hub") ? "active" : ""}`}>
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-1 14H6v-2h12zm0-4H6V7h12z" />
           </svg>
-          <span>Therapy Hub</span>
+          <span>Train Your Speech</span>
         </Link>
 
-        <Link
-          to="/history"
-          className={`nav-item ${isActive("/history") ? "active" : ""}`}
-        >
+        <Link to="/analytics" className={`nav-item ${isActive("/analytics") ? "active" : ""}`}>
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" />
+            <path d="M4 19h16v2H2V3h2v16zm3-3h2V9H7v7zm4 0h2V5h-2v11zm4 0h2v-4h-2v4z" />
+          </svg>
+          <span>Analytics</span>
+        </Link>
+
+        <Link to="/history" className={`nav-item ${isActive("/history") ? "active" : ""}`}>
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 3a9 9 0 100 18 9 9 0 000-18zm1 10h-4V7h2v4h2v2z" />
           </svg>
           <span>History</span>
         </Link>
 
-        <Link
-          to="/reports"
-          className={`nav-item ${isActive("/reports") ? "active" : ""}`}
-        >
+        <Link to="/reports" className={`nav-item ${isActive("/reports") ? "active" : ""}`}>
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+            <path d="M7 3h10l4 4v14H3V3h4zm7 1.5V8h3.5L14 4.5zM6 12h12v2H6zm0 4h12v2H6z" />
           </svg>
           <span>Reports</span>
         </Link>
 
-        <Link
-          to="/profile"
-          className={`nav-item ${isActive("/profile") ? "active" : ""}`}
-        >
+        <Link to="/profile" className={`nav-item ${isActive("/profile") ? "active" : ""}`}>
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            <path d="M12 12c2.76 0 5-2.24 5-5S14.76 2 12 2 7 4.24 7 7s2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
           </svg>
-          <span>Profile</span>
+          <span>Settings</span>
         </Link>
       </nav>
+
+      <div className="sidebar-footer">
+        <div className="sidebar-user">
+          <div className="user-initial">{userInitial}</div>
+          <div>
+            <p>{userName}</p>
+            <small>SpeechWell User</small>
+          </div>
+        </div>
+        <button type="button" className="sidebar-logout" onClick={handleLogout}>
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 17l1.41-1.41L8.83 13H21v-2H8.83l2.58-2.59L10 7l-5 5 5 5zM3 3h8v2H5v14h6v2H3z" />
+          </svg>
+          <span>Sign Out</span>
+        </button>
+      </div>
     </aside>
   );
 }
-

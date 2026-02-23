@@ -1,278 +1,278 @@
-/* File Logic Summary: Stylesheet controlling visual presentation; it affects UI clarity but not scoring algorithms. */
+/* File Logic Summary: Therapy hub styles for exercise cards, filter controls, embedded resource links, and responsive learning layout. */
 
 .therapy-layout {
   display: flex;
-  margin-top: 70px;
+  margin-top: var(--nav-h);
 }
 
 .therapy-content {
   flex: 1;
-  margin-left: 200px;
-  padding: 30px;
-  background: linear-gradient(135deg, #f5f8fc 0%, #e8f1f8 100%);
-  min-height: calc(100vh - 70px);
+  margin-left: var(--sidebar-w);
+  padding: clamp(1rem, 2.8vw, 1.9rem);
+  min-height: calc(100vh - var(--nav-h));
 }
 
 .therapy-header {
-  margin-bottom: 30px;
+  margin-bottom: 0.9rem;
 }
 
 .therapy-header h1 {
-  font-size: 1.8em;
-  color: #003d82;
-  margin: 0 0 10px 0;
+  color: var(--text-strong);
+  margin-bottom: 0.3rem;
 }
 
-.therapy-header p {
-  color: #666;
-  margin: 0;
-  font-size: 0.95em;
-}
-
-/* Filters */
 .therapy-filters {
   display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
   align-items: center;
-}
-
-.filter-dropdown {
-  padding: 10px 16px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background-color: white;
-  color: #333;
-  cursor: pointer;
-  font-size: 0.95em;
-  transition: border-color 0.3s ease;
-}
-
-.filter-dropdown:hover {
-  border-color: #0052a3;
-}
-
-.filter-dropdown:focus {
-  outline: none;
-  border-color: #0052a3;
-  box-shadow: 0 0 0 3px rgba(0, 82, 163, 0.1);
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
 }
 
 .clear-filters {
-  padding: 10px 16px;
-  border: 1px solid #ddd;
-  background-color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  color: #666;
-  transition: all 0.3s ease;
+  margin-left: auto;
 }
 
-.clear-filters:hover {
-  background-color: #f5f5f5;
-  border-color: #999;
-}
-
-/* Filter Tags */
 .filters-tags {
   display: flex;
-  gap: 8px;
-  margin-bottom: 30px;
   flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.9rem;
 }
 
 .tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background-color: white;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  font-size: 0.85em;
-  color: #666;
+  gap: 0.3rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.24rem 0.56rem;
 }
 
 .tag svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   fill: currentColor;
-  cursor: pointer;
-  transition: color 0.3s ease;
 }
 
-.tag svg:hover {
-  color: #0052a3;
+.video-resources {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 0.9rem;
+  margin-bottom: 0.95rem;
 }
 
-/* Exercises Grid */
+.video-resources h2 {
+  font-size: 1.2rem;
+  color: var(--text-strong);
+  margin-bottom: 0.3rem;
+}
+
+.video-resources p {
+  margin-bottom: 0.65rem;
+}
+
+.practice-controls {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 0.9rem;
+  margin-bottom: 0.95rem;
+}
+
+.practice-controls h2 {
+  color: var(--text-strong);
+  margin-bottom: 0.25rem;
+}
+
+.practice-actions {
+  margin-top: 0.65rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.6rem;
+}
+
+.resource-link {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.62rem 0.72rem;
+  color: var(--text-strong);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.resource-link span {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.16rem;
+}
+
+.resource-link small {
+  color: var(--text-muted);
+}
+
+.resource-link:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
 .exercises-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.9rem;
 }
 
-/* Exercise Card */
 .exercise-card {
-  background-color: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: linear-gradient(160deg, #fff, var(--surface-soft));
+  box-shadow: var(--shadow-sm);
+  padding: 0.9rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
+  animation: cardIn 0.4s ease both;
 }
 
 .exercise-card:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-  transform: translateY(-4px);
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: var(--shadow-md);
 }
 
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 0.55rem;
 }
 
 .category-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8em;
-  font-weight: 600;
-  color: white;
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.22rem 0.56rem;
+  font-size: 0.74rem;
+  color: #fff;
+  font-weight: 800;
 }
 
 .category-badge.dysarthria {
-  background: linear-gradient(135deg, #0052a3, #0073d9);
+  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 75%, #2563eb));
 }
 
 .category-badge.stuttering {
-  background: linear-gradient(135deg, #4caf50, #45a049);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #22c55e));
 }
 
 .exercise-title {
-  font-size: 1.2em;
-  color: #003d82;
-  margin: 0 0 10px 0;
-  font-weight: 700;
+  color: var(--text-strong);
+  margin-bottom: 0.3rem;
 }
 
 .exercise-description {
-  color: #666;
-  font-size: 0.9em;
-  line-height: 1.5;
-  margin: 0 0 15px 0;
+  font-size: 0.87rem;
+  line-height: 1.58;
+  margin-bottom: 0.55rem;
   flex-grow: 1;
 }
 
 .exercise-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 15px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border);
+  padding-top: 0.55rem;
+  margin-top: 0.1rem;
+  margin-bottom: 0.6rem;
 }
 
 .exercise-type {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.85em;
-  color: #0052a3;
-  font-weight: 600;
+  gap: 0.24rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .exercise-type svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   fill: currentColor;
 }
 
+.exercise-actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.btn-start-exercise,
+.btn-watch-video {
+  border-radius: 999px;
+  padding: 0.56rem 0.78rem;
+  font-size: 0.84rem;
+  text-align: center;
+  font-weight: 700;
+}
+
 .btn-start-exercise {
-  padding: 10px 20px;
-  background-color: #0052a3;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.95em;
-  transition: all 0.3s ease;
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
 }
 
-.btn-start-exercise:hover {
-  background-color: #003d82;
-  box-shadow: 0 4px 12px rgba(0, 82, 163, 0.3);
-  transform: translateY(-1px);
+.btn-watch-video {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--primary);
 }
 
-.btn-start-exercise:active {
-  transform: translateY(0);
+.btn-watch-video:hover {
+  background: var(--primary-soft);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 1120px) {
+  .therapy-content {
+    margin-left: 88px;
+  }
+}
+
+@media (max-width: 860px) {
   .therapy-content {
     margin-left: 0;
-    padding: 20px;
-  }
-
-  .exercises-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-  }
-}
-
-@media (max-width: 768px) {
-  .therapy-header h1 {
-    font-size: 1.5em;
+    padding-bottom: 92px;
   }
 
   .therapy-filters {
-    flex-wrap: wrap;
+    align-items: stretch;
   }
 
-  .exercises-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
+  .clear-filters,
+  .btn-start-exercise,
+  .btn-watch-video {
+    width: 100%;
   }
 
-  .exercise-card {
-    padding: 20px;
-  }
-
-  .exercise-title {
-    font-size: 1.1em;
+  .practice-actions {
+    flex-direction: column;
   }
 }
 
-@media (max-width: 480px) {
-  .therapy-content {
-    padding: 15px;
-  }
-
+@media (max-width: 520px) {
   .exercises-grid {
     grid-template-columns: 1fr;
   }
-
-  .exercise-card {
-    padding: 16px;
-  }
-
-  .exercise-title {
-    font-size: 1em;
-  }
-
-  .exercise-description {
-    font-size: 0.85em;
-  }
-
-  .btn-start-exercise {
-    width: 100%;
-  }
 }
 
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
