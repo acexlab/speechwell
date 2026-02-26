@@ -40,7 +40,12 @@ pip install -r requirements.txt
 # Copy example env file and edit it with your API keys
 Copy-Item .env.example .env
 
-# Edit .env and set keys for chat features (optional)
+# Edit .env for chat features (optional if chat is not used)
+# CHAT_PROVIDER=auto
+# OLLAMA_BASE_URL=http://127.0.0.1:11434
+# OLLAMA_MODEL=qwen2.5:30b
+#
+# Optional cloud providers:
 # OPENAI_API_KEY=...
 # OPENAI_MODEL=gpt-4o-mini
 # GEMINI_API_KEY=...
@@ -48,7 +53,8 @@ Copy-Item .env.example .env
 ```
 
 Notes:
-- Chat features require `OPENAI_API_KEY` or `GEMINI_API_KEY`.
+- Chat features can run locally with Ollama (`OLLAMA_BASE_URL` + `OLLAMA_MODEL`) and do not require cloud API keys.
+- Cloud chat providers still work via `OPENAI_API_KEY` or `GEMINI_API_KEY`.
 - Core analysis (upload + ML pipeline) runs without chat keys.
 
 ### Step 2.4: Ensure ML model artifacts exist
@@ -65,8 +71,12 @@ python ml/training/train_dysarthria_model.py
 
 ### Step 2.5: Start the backend API
 ```powershell
-cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Run from project root (recommended)
+uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Alternative: run from backend/ folder
+# cd backend
+# uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Expected:
@@ -93,8 +103,7 @@ Expected:
 
 Terminal 1 (Backend):
 ```powershell
-cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Terminal 2 (Frontend):

@@ -20,9 +20,11 @@ def _ensure_model_loaded() -> bool:
     try:
         import os
         from transformers import Wav2Vec2Model, Wav2Vec2Processor  # type: ignore
+        from transformers.utils import logging as transformers_logging  # type: ignore
 
         os.environ.setdefault("HF_HUB_OFFLINE", "1")
         os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        transformers_logging.set_verbosity_error()
 
         processor = Wav2Vec2Processor.from_pretrained(_MODEL_NAME, local_files_only=True)
         model = Wav2Vec2Model.from_pretrained(_MODEL_NAME, local_files_only=True)

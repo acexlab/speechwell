@@ -18,8 +18,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "OK: Python $pythonCheck" -ForegroundColor Green
 
-# Navigate to workspace
-$workspacePath = "c:\Users\franc\Documents\SpeechWell"
+# Navigate to workspace (folder containing this script)
+$workspacePath = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $workspacePath
 
 # Install backend dependencies
@@ -60,8 +60,7 @@ Write-Host ""
 Write-Host "To start the application:" -ForegroundColor Green
 Write-Host ""
 Write-Host "1. Start Backend (Terminal 1):" -ForegroundColor Yellow
-Write-Host "   cd backend" -ForegroundColor Gray
-Write-Host "   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000" -ForegroundColor Gray
+Write-Host "   uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000" -ForegroundColor Gray
 Write-Host ""
 Write-Host "2. Start Frontend (Terminal 2):" -ForegroundColor Yellow
 Write-Host "   cd speechwell-frontend" -ForegroundColor Gray

@@ -15,6 +15,7 @@ import Results from "./pages/Results";
 import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
 import Analytics from "./pages/Analytics";
+import AIChat from "./pages/AIChat";
 import Navbar from "./components/Navbar";
 import IntroAnimation from "./components/IntroAnimation";
 import LoadingAnimation from "./components/LoadingAnimation";
@@ -67,6 +68,7 @@ function AppShell() {
         <Route path="/history" element={<History />} />
         <Route path="/therapy-hub" element={<TherapyHub />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/ai-chat" element={<AIChat />} />
         <Route path="/results" element={<Results />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/profile" element={<Profile />} />

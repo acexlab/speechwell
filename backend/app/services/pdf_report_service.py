@@ -7,6 +7,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from datetime import datetime
 import os
+from ..paths import REPORTS_DIR
 
 
 # ===== LAYOUT CONSTANTS =====
@@ -125,9 +126,10 @@ def generate_pdf_report(
     audio_id: str,
     whisper_features: dict,
     classification_result: dict,
-    output_dir: str = "storage/reports",
+    output_dir: str | None = None,
     report_filename: str | None = None,
 ):
+    output_dir = output_dir or str(REPORTS_DIR)
     os.makedirs(output_dir, exist_ok=True)
     file_name = report_filename or f"{audio_id}_report.pdf"
     file_path = os.path.join(output_dir, file_name)

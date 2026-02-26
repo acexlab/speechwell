@@ -82,6 +82,13 @@ export default function Sidebar() {
           <span>Analytics</span>
         </Link>
 
+        <Link to="/ai-chat" className={`nav-item ${isActive("/ai-chat") ? "active" : ""}`}>
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4h16v11H7l-3 3V4zm2 2v7.17L6.17 13H18V6H6zm2 2h8v2H8V8zm0 3h5v2H8v-2z" />
+          </svg>
+          <span>AI Chat</span>
+        </Link>
+
         <Link to="/history" className={`nav-item ${isActive("/history") ? "active" : ""}`}>
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M13 3a9 9 0 100 18 9 9 0 000-18zm1 10h-4V7h2v4h2v2z" />

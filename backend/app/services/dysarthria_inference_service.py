@@ -4,11 +4,24 @@ File Logic Summary: Dysarthria inference module. Algorithm combines fluency metr
 
 import joblib
 import numpy as np
+from ..paths import (
+    DYSARTHRIA_MODEL_PATH,
+    DYSARTHRIA_PCA_PATH,
+    DYSARTHRIA_SCALER_PATH,
+)
 
-# Load artifacts once
-model = joblib.load("ml/models/dysarthria_model_v1.pkl")
-pca = joblib.load("ml/models/dysarthria_pca_v1.pkl")
-scaler = joblib.load("ml/models/dysarthria_scaler_v1.pkl")
+model = None
+pca = None
+scaler = None
+
+
+def _ensure_artifacts_loaded():
+    global model, pca, scaler
+    if model is not None and pca is not None and scaler is not None:
+        return
+    model = joblib.load(DYSARTHRIA_MODEL_PATH)
+    pca = joblib.load(DYSARTHRIA_PCA_PATH)
+    scaler = joblib.load(DYSARTHRIA_SCALER_PATH)
 
 
 def predict_dysarthria(whisper_features, acoustic_embedding):
@@ -16,6 +29,7 @@ def predict_dysarthria(whisper_features, acoustic_embedding):
     whisper_features: dict
     acoustic_embedding: list[float]
     """
+    _ensure_artifacts_loaded()
 
     # Fluency features
     X_fluency = np.array([[

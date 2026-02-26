@@ -4,6 +4,7 @@ File Logic Summary: FastAPI entrypoint. It validates uploads, normalizes audio, 
 
 import os
 import sys
+import warnings
 try:
     from dotenv import load_dotenv  # type: ignore
 except Exception:  # pragma: no cover
@@ -12,14 +13,42 @@ except Exception:  # pragma: no cover
 from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from .paths import (
+    PROJECT_ROOT,
+    UPLOADED_AUDIO_DIR,
+    PROCESSED_AUDIO_DIR,
+    REPORTS_DIR as REPORTS_PATH,
+)
+
+# Suppress noisy third-party warnings that do not affect runtime correctness.
+warnings.filterwarnings(
+    "ignore",
+    message=r"`resume_download` is deprecated.*",
+    category=FutureWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r"Passing `gradient_checkpointing` to a config initialization is deprecated.*",
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r"Some weights of Wav2Vec2Model were not initialized from the model checkpoint.*",
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r"pkg_resources is deprecated as an API.*",
+    category=UserWarning,
+)
 
 # Ensure project root is on PYTHONPATH so this app starts from either
 # `SpeechWell` root or `SpeechWell/backend` working directory.
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+project_root_str = str(PROJECT_ROOT)
+if project_root_str not in sys.path:
+    sys.path.insert(0, project_root_str)
 if load_dotenv is not None:
-    load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
+    load_dotenv(str(PROJECT_ROOT / ".env"))
 
 from backend.app.database.db import engine, SessionLocal
 from backend.app.database.models import Base, Analysis, User
@@ -109,9 +138,9 @@ def ensure_sqlite_schema_compatibility():
 
 ensure_sqlite_schema_compatibility()
 
-UPLOAD_DIR = "storage/uploaded_audio"
-PROCESSED_DIR = "storage/processed_audio"
-REPORTS_DIR = "storage/reports"
+UPLOAD_DIR = str(UPLOADED_AUDIO_DIR)
+PROCESSED_DIR = str(PROCESSED_AUDIO_DIR)
+REPORTS_DIR = str(REPORTS_PATH)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DIR, exist_ok=True)
@@ -475,14 +504,43 @@ def health_check():
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_with_ai(
     payload: ChatRequest,
+    db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    """SpeechWell AI coach endpoint backed by Gemini."""
+    """SpeechWell AI coach endpoint backed by configured chat provider."""
     try:
         from backend.app.services.chat_service import generate_chat_reply
 
         history = [{"role": m.role, "text": m.text} for m in payload.history]
-        reply = generate_chat_reply(payload.message, history)
+        analysis_context = None
+        if current_user:
+            query = db.query(Analysis).filter(Analysis.user_id == current_user.id)
+            if payload.audio_id:
+                query = query.filter(Analysis.audio_id == payload.audio_id)
+            analysis = query.order_by(Analysis.created_at.desc()).first()
+            if analysis:
+                analysis_context = {
+                    "audio_id": analysis.audio_id,
+                    "filename": analysis.filename,
+                    "transcript": analysis.transcript,
+                    "dysarthria_probability": float(analysis.dysarthria_probability or 0.0),
+                    "dysarthria_label": analysis.dysarthria_label,
+                    "stuttering_probability": float(analysis.stuttering_probability or 0.0),
+                    "stuttering_repetitions": int(analysis.stuttering_repetitions or 0),
+                    "stuttering_prolongations": int(analysis.stuttering_prolongations or 0),
+                    "stuttering_blocks": int(analysis.stuttering_blocks or 0),
+                    "grammar_score": float(analysis.grammar_score or 0.0),
+                    "grammar_error_count": int(analysis.grammar_error_count or 0),
+                    "corrected_text": analysis.corrected_text,
+                    "phonological_score": float(analysis.phonological_score or 0.0),
+                    "phonological_error_count": int(analysis.phonological_error_count or 0),
+                    "speaking_rate_wps": float(analysis.speaking_rate_wps or 0.0),
+                    "average_pause_sec": float(analysis.average_pause_sec or 0.0),
+                    "max_pause_sec": float(analysis.max_pause_sec or 0.0),
+                    "total_duration_sec": float(analysis.total_duration_sec or 0.0),
+                }
+
+        reply = generate_chat_reply(payload.message, history, analysis_context=analysis_context)
         return ChatResponse(reply=reply)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

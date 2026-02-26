@@ -16,7 +16,7 @@ The entire SpeechWell application has been connected end-to-end with:
 ### Step 1: Install Backend Dependencies
 
 ```bash
-cd c:\Users\franc\Documents\SpeechWell
+cd <project-root>
 pip install -r requirements.txt
 ```
 
@@ -46,8 +46,7 @@ python ml/training/train_dysarthria_model.py
 ### Step 3: Start the Backend API
 
 ```bash
-cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Expected output:**

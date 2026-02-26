@@ -125,6 +125,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: list[ChatMessage] = []
+    audio_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

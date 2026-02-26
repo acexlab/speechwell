@@ -294,7 +294,8 @@ export async function checkHealth(): Promise<boolean> {
 
 export async function sendChatMessage(
   message: string,
-  history: ChatMessagePayload[]
+  history: ChatMessagePayload[],
+  audioId?: string
 ): Promise<string> {
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: "POST",
@@ -302,7 +303,7 @@ export async function sendChatMessage(
       "Content-Type": "application/json",
       ...getAuthHeader(),
     },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, audio_id: audioId }),
   });
 
   if (!response.ok) {
