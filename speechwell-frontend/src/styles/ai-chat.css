@@ -62,8 +62,9 @@
 
 .chat-bubble.assistant {
   align-self: flex-start;
-  background: #fff;
+  background: var(--surface-elevated);
   color: var(--text-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .chat-bubble.typing {
@@ -76,7 +77,7 @@
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #8f8bb3;
+  background: var(--text-muted);
   animation: typingPulse 1s infinite;
 }
 
@@ -109,7 +110,7 @@
   display: grid;
   place-items: center;
   padding: 0;
-  background: #fff;
+  background: var(--surface-elevated);
   color: var(--primary);
   border: 1px solid var(--border);
   position: relative;
@@ -191,7 +192,29 @@
 @media (max-width: 860px) {
   .chat-content {
     margin-left: 0;
-    padding-bottom: 92px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 }
 
+@media (max-width: 520px) {
+  .chat-content {
+    padding-inline: 0.75rem;
+  }
+
+  .chat-shell {
+    min-height: 68vh;
+  }
+
+  .chat-bubble {
+    max-width: 94%;
+  }
+
+  .chat-controls {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .chat-controls input {
+    flex-basis: 100%;
+  }
+}

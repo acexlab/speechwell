@@ -1,1003 +1,1047 @@
-<!-- File Logic Summary: Project-level documentation describing architecture, algorithms, and operational behavior. -->
+<!-- File Logic Summary: Project-level documentation for SpeechWell covering architecture, module integration, algorithms, formulas, data flow, and current implementation behavior. -->
 
-# SpeechWell Technical Documentation
+# SpeechWell
 
-## 1. Executive Summary
-SpeechWell is an end-to-end speech analysis platform that accepts uploaded or live-recorded audio, runs a multi-stage analysis pipeline, stores results, and generates downloadable clinical-style PDF reports.
+SpeechWell is a React + FastAPI speech improvement platform with two connected layers:
 
-The system combines:
-- Deep-learning feature extraction (Whisper, Wav2Vec2)
-- A trained dysarthria classifier (logistic regression over engineered + acoustic features)
-- Rule-based estimators (stuttering and phonological indicators)
-- Grammar correction and grammar-error probability estimation
-- Full-stack integration (React frontend + FastAPI backend + SQLite persistence)
+- `Speech Analysis`
+  - upload or record speech, run analysis, save results, generate reports
+- `Guided Speech Training Module`
+  - structured practice sessions for breath, articulation, fluency, and grammar
 
-This document is written for technical evaluation and viva/invigilator review.
+This README documents how the modules connect, how each one works, and the exact scoring logic currently implemented in the codebase.
 
-## 2. Objectives and Scope
-Primary objective:
-- Provide structured, explainable, and repeatable speech-quality indicators from a single audio sample.
+---
 
-Current output dimensions:
-- Dysarthria probability + label
-- Stuttering probability + event breakdown
-- Grammar error probability + corrected transcript
-- Phonological error probability + affected words
-- Timing/fluency metrics (speaking rate, pauses, duration)
-- Consolidated downloadable PDF report
+## 1. System Overview
 
-Non-goals:
-- This system is not a medical diagnostic device.
-- Scores are decision-support indicators, not clinical diagnosis.
+SpeechWell is built from:
 
-## 3. System Architecture
+- Frontend: `speechwell-frontend/`
+  - React + Vite
+  - routes, dashboards, training UI, embedded video practice, theme system
+- Backend: `backend/app/`
+  - FastAPI
+  - auth, profile, analysis APIs, training APIs, persistence
+- ML / speech logic: `ml/` and `backend/app/services/`
+  - Whisper transcript + timing features
+  - acoustic features / embeddings
+  - dysarthria classifier
+  - rule-based fluency / phonology logic
+  - grammar improvement through configured provider or local Ollama
+- Database: SQLite
+  - user records
+  - analysis records
+  - training sessions
+  - training progress
 
-### 3.1 High-level components
-- Frontend (`speechwell-frontend/`): user interaction, upload/recording, result visualization.
-- Backend API (`backend/app/main.py`): authentication, orchestration, persistence, report delivery.
-- ML pipeline (`ml/services/` + `ml/feature_extraction/` + `backend/app/services/`): feature extraction and scoring.
-- Data layer (`backend/app/database/` + SQLite): durable storage for users, analyses, metadata.
-- Artifact storage (`storage/`): uploaded audio, normalized audio, generated reports.
+---
 
-### 3.2 Runtime request flow (single analysis)
-1. Frontend sends `POST /api/analyze` with audio file + optional bearer token.
-2. Backend validates MIME/extension and stores original file in `storage/uploaded_audio/`.
-3. Backend inserts analysis row with `status="processing"`.
-4. Backend normalizes audio via FFmpeg to mono 16k WAV in `storage/processed_audio/`.
-5. Backend executes `run_full_analysis(...)`.
-6. Backend writes scores, transcript fields, timing metrics, and status into DB.
-7. Backend generates report in `storage/reports/` and stores report path.
-8. Frontend fetches detailed result (`GET /api/analyze/{audio_id}`) and renders cards/charts/transcripts.
+## Deployment Notes
 
-### 3.3 Authentication wiring
-- Registration/login endpoints return JWT bearer token.
-- Frontend stores token in `localStorage` and sends it in `Authorization: Bearer ...`.
-- Backend decodes token to resolve current user and scope history/report access.
+The deployable web app lives in `speechwell-frontend/`. The FastAPI + ML backend is intentionally kept separate because it depends on Python audio/ML packages, FFmpeg, model files, runtime storage, and SQLite state.
 
-## 4. End-to-End ML/Analysis Pipeline
+### Vercel frontend
 
-Main orchestrator:
-- `ml/services/speech_analysis_service.py` -> `run_full_analysis(audio_path)`
+This repo includes a root `vercel.json` so Vercel can be connected directly to the GitHub repository:
 
-Pipeline stages:
-1. Whisper feature extraction
-2. Grammar analysis
-3. Acoustic embedding extraction
-4. Dysarthria inference
-5. Stuttering scoring
-6. Phonological scoring
-7. Structured result assembly
+- Build command: `cd speechwell-frontend && npm run build`
+- Install command: `cd speechwell-frontend && npm ci`
+- Output directory: `speechwell-frontend/dist`
+- SPA routes rewrite to `index.html`
 
-Fault tolerance policy:
-- Each stage is wrapped with fallback behavior.
-- If a stage fails, the pipeline returns safe defaults (mostly zeros) instead of aborting the whole request.
-- This keeps UX resilient while preserving failure visibility (`status` and `error_message` in DB when fatal).
+Set this Vercel environment variable for production:
 
-## 5. Detailed Algorithm Specifications
+```text
+VITE_API_URL=https://your-backend-api.example.com
+```
+
+### GitHub workflows
+
+Two workflows are included:
+
+- `.github/workflows/frontend-build.yml` checks install, lint, and build on pushes/PRs.
+- `.github/workflows/github-pages.yml` publishes the Vite frontend to GitHub Pages from `main`.
+
+### Backend deployment
+
+Deploy the backend to a Docker-friendly host such as Render, Railway, Fly.io, a VM, or a container platform. This repository includes:
+
+- `Dockerfile`
+- `.dockerignore`
+- `render.yaml`
+- `backend/DEPLOYMENT.md`
+
+Recommended Render flow:
+
+1. Push this repo to GitHub.
+2. In Render, create a new Blueprint from the repository.
+3. Render reads `render.yaml`, builds the Docker backend, and attaches a persistent `/var/data` disk.
+4. Configure:
+
+```text
+CORS_ORIGINS=https://your-vercel-app.vercel.app,https://your-github-username.github.io
+```
+
+5. After Render gives you the backend URL, set this in Vercel:
+
+```text
+VITE_API_URL=https://your-render-service.onrender.com
+```
+
+6. Redeploy the Vercel frontend.
+
+Large local artifacts are excluded from future commits/deployments through `.gitignore` and `.vercelignore`, including `ml/datasets/`, virtual environments, SQLite files, generated PDFs/DOCX files, and runtime storage.
+
+---
+
+## 2. Core Modules
+
+SpeechWell now has 4 practical runtime modules:
+
+1. `Authentication + User Context`
+2. `Speech Analysis Pipeline`
+3. `Guided Speech Training Module`
+4. `Progress, Reporting, and Frontend Presentation`
+
+---
+
+## 3. Module 1: Authentication + User Context
+
+### Purpose
+
+This module identifies the user and connects both analysis history and training progress to the same account.
+
+### Main files
+
+- `backend/app/main.py`
+- `backend/app/services/auth_service.py`
+- `backend/app/database/models.py`
+- `speechwell-frontend/src/api/api.ts`
+
+### Flow
+
+1. user registers or logs in
+2. backend returns JWT bearer token
+3. frontend stores token in `localStorage`
+4. every protected request sends `Authorization: Bearer <token>`
+5. backend resolves the current user through `get_current_user()`
+
+### Connected features
+
+The same authenticated user is used for:
+
+- analysis upload ownership
+- results/history/report access
+- training session ownership
+- training progress summaries
+- profile and theme preferences
+
+So the training module is not a separate app. It is attached directly to the same user context already used by the analysis system.
+
+---
+
+## 4. Module 2: Speech Analysis Pipeline
+
+### Purpose
+
+This module accepts an uploaded or recorded speech sample and computes:
+
+- dysarthria probability
+- stuttering probability
+- grammar error probability
+- phonological error probability
+- transcript and timing metrics
+
+### Main files
+
+- `backend/app/main.py`
+- `ml/services/speech_analysis_service.py`
+- `ml/feature_extraction/extract_whisper.py`
+- `ml/feature_extraction/extract_acoustic.py`
+- `backend/app/services/dysarthria_inference_service.py`
+- `backend/app/services/stuttering_service.py`
+- `backend/app/services/grammar_service.py`
+- `backend/app/services/phonological_service.py`
+- `backend/app/services/pdf_report_service.py`
+
+### End-to-end request flow
+
+1. frontend sends `POST /api/analyze`
+2. backend validates file format
+3. backend stores original upload
+4. backend normalizes audio with FFmpeg to mono 16kHz WAV
+5. backend calls `run_full_analysis(...)`
+6. pipeline builds transcript, acoustic features, and speech metrics
+7. dysarthria / stuttering / grammar / phonology outputs are calculated
+8. result is saved in `analyses`
+9. PDF report is generated
+10. frontend loads the result page and dashboard views
+
+---
+
+## 5. Analysis Algorithms and Equations
 
 ## 5.1 Audio normalization
-File: `backend/app/main.py` (`normalize_audio`)
 
-Command behavior:
-- `ffmpeg -i input -ac 1 -ar 16000 output.wav`
+File:
+
+- `backend/app/main.py`
+
+Operation:
+
+```text
+ffmpeg -i input -ac 1 -ar 16000 output.wav
+```
 
 Why:
-- Forces consistent channel count and sample rate for downstream models.
-- Reduces model variance caused by mixed input formats.
 
-## 5.2 Whisper transcript + timing features
-File: `ml/feature_extraction/extract_whisper.py`
+- standardizes sample rate
+- standardizes channel count
+- reduces downstream model input variation
+
+## 5.2 Transcript and timing features
+
+File:
+
+- `ml/feature_extraction/extract_whisper.py`
 
 Model:
-- OpenAI Whisper `base`.
 
-Extracted objects:
-- Transcript text
-- Segment list (`start`, `end`, `text`)
-- Aggregated fluency metrics
+- Whisper `base`
 
-Definitions:
-- `total_words = len(transcript.split())`
-- For each segment `i`: `dur_i = end_i - start_i`
-- `total_duration_sec = sum(dur_i)`
-- Inter-segment pause: `pause_i = start_i - end_{i-1}` if positive
-- `average_pause_sec = mean(pause_i)` (0 if none)
-- `max_pause_sec = max(pause_i)` (0 if none)
-- `speaking_rate_wps = total_words / total_duration_sec` (0 if duration == 0)
+Outputs:
 
-Output contract:
-- `transcript`, `total_words`, `speaking_rate_wps`, `average_pause_sec`, `max_pause_sec`, `total_duration_sec`, `segments`
+- transcript
+- segment timestamps
+- word count
+- speaking rate
+- pause metrics
+- total duration
+
+### Equations
+
+Let:
+
+- `W = total number of transcript words`
+- `T = speaking duration in seconds`
+- `pause_i = start_i - end_(i-1)` for each positive pause
+
+Then:
+
+```text
+speaking_rate_wps = W / T
+average_pause_sec = mean(pause_i)
+max_pause_sec = max(pause_i)
+total_duration_sec = total audio duration
+```
 
 ## 5.3 Acoustic embedding extraction
-File: `ml/feature_extraction/extract_acoustic.py`
+
+File:
+
+- `ml/feature_extraction/extract_acoustic.py`
 
 Model:
-- `facebook/wav2vec2-base` (local/offline load).
 
-Processing steps:
-1. Read waveform via `soundfile`.
-2. Convert multi-channel audio to mono by averaging channels.
-3. Resample to 16kHz if needed.
-4. Tokenize waveform with `Wav2Vec2Processor`.
-5. Run `Wav2Vec2Model` inference.
-6. Mean-pool last hidden state across time.
+- `facebook/wav2vec2-base`
+
+Steps:
+
+1. load waveform
+2. convert to mono if needed
+3. resample to 16kHz
+4. run Wav2Vec2
+5. mean-pool hidden states
 
 Output:
-- Fixed-size 768-dimensional embedding vector.
 
-Fallback:
-- Returns zero vector `[0.0] * 768` if model unavailable.
+- 768-dimensional acoustic embedding
 
-## 5.4 Dysarthria model inference
-File: `backend/app/services/dysarthria_inference_service.py`
+## 5.4 Dysarthria inference
 
-Artifacts:
-- `ml/models/dysarthria_scaler_v1.pkl`
-- `ml/models/dysarthria_pca_v1.pkl`
-- `ml/models/dysarthria_model_v1.pkl`
+File:
 
-Input feature set:
-- Fluency vector (3 dims):
+- `backend/app/services/dysarthria_inference_service.py`
+
+Inputs:
+
+- fluency features:
   - `speaking_rate_wps`
   - `average_pause_sec`
   - `max_pause_sec`
-- Acoustic vector (768 dims)
+- acoustic embedding
 
-Algorithm:
-1. Scale acoustic vector using persisted `StandardScaler`.
-2. Apply persisted PCA transform.
-3. Concatenate fluency + PCA acoustic features.
-4. Predict positive class probability using logistic regression:
-   - `p_dys = model.predict_proba(X)[0][1]`
-5. Decision rule:
-   - `label = "dysarthria" if p_dys >= 0.5 else "healthy"`
+Artifacts:
 
-Returned fields:
-- `probability = round(p_dys, 3)`
-- `label`
+- scaler
+- PCA transform
+- logistic regression model
 
-## 5.5 Stuttering probability algorithm
-File: `backend/app/services/stuttering_service.py`
+### Logic
 
-Inputs:
-- Whisper transcript and segments.
+```text
+X_fluency = [speaking_rate_wps, average_pause_sec, max_pause_sec]
+X_acoustic_scaled = scaler.transform(acoustic_embedding)
+X_acoustic_pca = pca.transform(X_acoustic_scaled)
+X = concat(X_fluency, X_acoustic_pca)
+p_dys = model.predict_proba(X)[0][1]
+label = "dysarthria" if p_dys >= 0.5 else "healthy"
+```
 
-Subscores:
-1. Repetition count
-- Consecutive repeated tokens in transcript:
-- `repetitions = sum(1 for i in [1..n-1] if words[i] == words[i-1])`
+## 5.5 Stuttering probability
 
-2. Prolongation count
-- Regex pattern `(.)\1{3,}` counts character runs length >= 4.
+File:
 
-3. Block count
-- Segment gaps interpreted as blocks when `start_i - end_{i-1} >= 1.0 sec`.
+- `backend/app/services/stuttering_service.py`
 
-Composite score:
-- `raw = 0.4*repetitions + 0.4*prolongations + 0.2*blocks`
-- `stuttering_probability = min(raw / 5, 1.0)`
-- Returned rounded to 3 decimals.
+Signals used:
 
-## 5.6 Grammar correction and grammar-error probability
-File: `backend/app/services/grammar_service.py`
+- consecutive repeated words
+- prolongations through character repetition
+- long inter-segment gaps treated as blocks
 
-Model:
-- `prithivida/grammar_error_correcter_v1` (text2text seq2seq, local/offline).
+### Equations
 
-Process:
-1. Generate corrected text from transcript.
-2. Estimate difference by token-count shift:
-   - `diff = abs(len(original_words) - len(corrected_words))`
-3. Floor estimate to 5% of original length:
-   - `error_estimate = max(diff, int(0.05 * len(original_words)))`
-4. Normalize:
-   - `grammar_error_probability = min(error_estimate / max(len(original_words),1), 1.0)`
+```text
+repetitions = count(words[i] == words[i-1])
+prolongations = count(regex "(.)\1{3,}")
+blocks = count(segment_gap >= 1.0 sec)
 
-Returned:
-- `grammar_error_probability` (rounded)
-- `error_count_estimate`
-- `corrected_text`
+raw_stutter = 0.4 * repetitions + 0.4 * prolongations + 0.2 * blocks
+stuttering_probability = min(raw_stutter / 5, 1.0)
+```
 
-Important semantic note:
-- DB field name is `grammar_score`, but stored value currently represents **error probability**.
-- Higher value indicates more detected issues (not better language quality).
+## 5.6 Grammar analysis
+
+File:
+
+- `backend/app/services/grammar_service.py`
+- `backend/app/services/score_service.py`
+- `backend/app/main.py`
+
+Current behavior:
+
+- corrects transcript using configured provider
+- provider can be local Ollama or configured remote provider
+- estimates grammar-error probability from original vs corrected text
+- converts that error probability into a positive grammar quality score before persistence
+
+### Equations
+
+```text
+error_estimate = token-level difference between original and corrected text
+structural_error_probability =
+  min(
+    0.08 * fragment_count +
+    0.05 * repeated_word_count +
+    0.04 * odd_token_count +
+    0.02 * lowercase_sentence_restart_count,
+    1.0
+  )
+
+grammar_error_probability =
+  max(
+    min(error_estimate / max(total_words, 1), 1.0),
+    structural_error_probability
+  )
+
+grammar_quality_score = 1.0 - grammar_error_probability
+```
+
+Persisted analysis meaning:
+
+- DB field name remains `grammar_score`
+- stored meaning is now `grammar_quality_score`
+- higher is better
+- `grammar_error_count` remains the raw count signal
+- `grammar_error_probability` is derived when needed for results, chat, and documentation
+
+Code path:
+
+```text
+transcript
+-> detect_grammar_errors()
+-> estimate_grammar_metrics()
+-> grammar_error_probability
+-> grammar_quality_score = 1 - grammar_error_probability
+-> analyses.grammar_score
+```
+
+Why this changed:
+
+- the earlier implementation relied too heavily on `original vs corrected` text diff
+- if the grammar model returned a transcript very close to the original, clearly poor transcript structure could still produce `0` estimated errors
+- fragmented or noisy transcripts could therefore receive an unrealistically high clarity score
+- the current implementation now combines:
+  - correction diff signal
+  - fragment detection
+  - repeated-word signal
+  - malformed token signal
+  - sentence restart/casing signal
 
 ## 5.7 Phonological error probability
-File: `backend/app/services/phonological_service.py`
 
-Rule set:
-- `R -> W`, `K -> T`, `G -> D`, `S -> TH`, `TH -> F/D`, `L -> W`
+File:
 
-Process:
-1. Convert transcript into words.
-2. Query expected phonemes per word using CMU dictionary (`pronouncing`).
-3. For each rule, detect phoneme/substitution co-occurrence pattern.
-4. Increment `error_count` and collect affected words.
+- `backend/app/services/phonological_service.py`
 
-Probability:
-- `phonological_error_probability = min(error_count / max(word_count,1), 1.0)`
+Method:
 
-## 5.8 PDF severity mapping
-File: `backend/app/services/pdf_report_service.py`
+- rule-based phoneme substitution checks using pronunciation lookup
 
-Severity thresholds used for bars:
-- `< 0.30` -> LOW
-- `0.30 to < 0.60` -> MODERATE
-- `>= 0.60` -> HIGH
+### Equation
 
-Applied to dysarthria, stuttering, and grammar blocks in report layout.
+```text
+phonological_error_probability = min(error_count / max(word_count, 1), 1.0)
+```
 
-## 6. Frontend Interpretation Logic
+## 5.8 Overall analysis score
 
-## 6.1 Dashboard risk bins
-File: `speechwell-frontend/src/pages/Dashboard.tsx`
+File:
 
-Dysarthria and stuttering risk mapping:
-- High: `>= 0.40`
-- Moderate: `>= 0.25 and < 0.40`
-- Low: `< 0.25`
+- `backend/app/services/score_service.py`
 
-Grammar badge mapping in UI:
-- Good: `>= 0.80`
-- Moderate: `>= 0.60`
-- Low: `< 0.60`
+### Equation
 
-## 6.2 History filter bins
-File: `speechwell-frontend/src/pages/History.tsx`
+```text
+overall_score =
+round(
+  0.7 * weighted_average +
+  0.3 * weakest_skill
+)
 
-Filter basis:
-- `max(dysarthria_probability, stuttering_probability)`
+where
 
-Bins:
-- High: `>= 0.40`
-- Moderate: `>= 0.25 and < 0.40`
-- Low: `< 0.25`
+pronunciation = (1 - dysarthria_probability) * 100
+fluency = (1 - stuttering_probability) * 100
+clarity = grammar_quality_score * 100
 
-## 6.3 Results page overall score
-File: `speechwell-frontend/src/pages/Results.tsx`
+weighted_average =
+  0.35 * pronunciation +
+  0.25 * fluency +
+  0.40 * clarity
 
-Current formula:
-`overallScore = round(((1 - dysarthria_probability)*0.33 + (1 - stuttering_probability)*0.33 + grammar_score*0.34) * 100)`
+weakest_skill = min(pronunciation, fluency, clarity)
+```
 
-Label bands:
-- `>= 80` Excellent
-- `>= 60` Good
-- `>= 40` Fair
-- `< 40` Needs Improvement
+Interpretation:
 
-Note:
-- Because `grammar_score` currently stores grammar-error probability, this term is directionally inconsistent with the two inverted risk terms.
+- dysarthria and stuttering are risk probabilities, so lower is better
+- grammar is a quality score, so higher is better
+- all three are now aligned directionally before the weighted sum
+- the weakest domain now pulls the total score down, so one inflated metric cannot hide a bad sample
 
-## 7. Model Training and Artifact Generation
+## 5.9 Dashboard and UI metric mapping
 
-## 7.1 Dataset indexing
-File: `ml/training/build_torgo_dataset.py`
+Files:
 
-- Scans TORGO directory by healthy/dysarthria class folders.
-- Writes indexed metadata CSV: `ml/training/torgo_index.csv`.
+- `speechwell-frontend/src/pages/Dashboard.tsx`
+- `speechwell-frontend/src/pages/Results.tsx`
 
-## 7.2 Feature extraction for training
-File: `ml/feature_extraction/extract_torgo_features.py`
+The frontend now uses the same metric direction as the backend:
 
-For each indexed audio:
-1. Run whisper feature extraction.
-2. Run acoustic embedding extraction.
-3. Store features + labels in `ml/training/torgo_features_full.pkl`.
+```text
+pronunciation = (1 - dysarthria_probability) * 100
+fluency = (1 - stuttering_probability) * 100
+clarity = grammar_quality_score * 100
+```
 
-## 7.3 Baseline model training
-File: `ml/training/train_dysarthria_model.py`
+Dashboard logic:
 
-- Uses only 3 fluency features.
-- Trains logistic regression baseline.
-- Outputs evaluation report and confusion matrix.
+- `Pronunciation` is the average inverse dysarthria risk
+- `Fluency` is the average inverse stuttering risk
+- `Clarity` is the average grammar quality score
+- `Recent Average Score` uses the same weighted equation as `overall_score`
 
-## 7.4 Full model training
-File: `ml/training/train_dysarthria_full.py`
+Code path:
 
-Pipeline:
-1. Load full extracted features.
-2. Scale acoustic embeddings.
-3. PCA dimensionality reduction.
-4. Concatenate fluency + PCA features.
-5. Train class-balanced logistic regression.
-6. Evaluate (classification report, confusion matrix).
-7. Persist model artifacts (`model`, `pca`, `scaler`) to `ml/models/`.
+```text
+analysis row
+-> dysarthria_probability / stuttering_probability / grammar_score
+-> dashboard aggregates
+-> progress bars and trend charts
+```
 
-## 8. Backend API Contract
+Results page logic:
 
-## 8.1 Endpoints
+- `Clarity Score` shows `grammar_score * 100`
+- stuttering detail shows:
+  - `repetitions`
+  - `prolongations`
+  - `blocks`
+  - `Fluency Score = (1 - stuttering_probability) * 100`
+
+Example of the fixed behavior:
+
+- if dysarthria risk is high and the transcript is fragmented/noisy, the overall score will now fall sharply
+- a transcript no longer gets `100%` clarity just because the correction model failed to rewrite it
+
+---
+
+## 6. Module 3: Guided Speech Training Module
+
+### Purpose
+
+This add-on module helps users practice speech directly inside SpeechWell instead of only uploading speech for diagnosis-style feedback.
+
+### Integration point
+
+Frontend route:
+
+- `speechwell-frontend/src/pages/TherapyHub.tsx`
+
+Backend routes:
+
+- `GET /api/training/modules`
+- `POST /api/training/session/start`
+- `POST /api/training/session/evaluate`
+- `GET /api/training/session/{session_id}`
+- `GET /api/training/sessions`
+- `GET /api/training/progress`
+
+### How it connects to the main system
+
+The training module reuses:
+
+- the same logged-in user
+- the same JWT auth flow
+- the same database engine
+- the same timing/transcript extraction style used in analysis
+- the same dashboard for progress summaries
+
+This means:
+
+- training is attached to the same `users` table
+- training progress is visible from the same app shell
+- training history uses the same account identity as speech analysis history
+
+---
+
+## 7. Training Mini-Modules
+
+Training catalog is defined in:
+
+- `backend/app/services/training_catalog.py`
+
+Current modules:
+
+1. `breath_voice`
+2. `articulation`
+3. `fluency`
+4. `grammar`
+
+### 7.1 Breath & Voice Control
+
+Exercises:
+
+- `vowel_hold`
+- `count_on_breath`
+- `soft_loud_repeat`
+
+Input:
+
+- microphone
+
+Focus:
+
+- breath support
+- steady sound production
+- smooth voice onset
+
+### 7.2 Articulation Practice
+
+Exercises:
+
+- `minimal_pairs`
+- `tongue_tip_drill`
+- `sentence_repeat_clear`
+
+Input:
+
+- microphone
+
+Focus:
+
+- consonant precision
+- clear word production
+- intelligibility
+
+### 7.3 Fluency Training
+
+Exercises:
+
+- `slow_read`
+- `easy_onset_phrase`
+- `pause_and_continue`
+
+Input:
+
+- microphone
+
+Focus:
+
+- reduced rush
+- smoother starts
+- controlled pauses
+
+### 7.4 Sentence & Grammar Practice
+
+Exercises:
+
+- `complete_sentence`
+- `fix_and_say`
+- `daily_topic`
+
+Input:
+
+- text input
+
+Focus:
+
+- sentence completion
+- correction of grammar
+- natural spoken sentence formation
+
+---
+
+## 8. Training Session Lifecycle
+
+### Start
+
+1. frontend loads module list from `GET /api/training/modules`
+2. user selects an exercise
+3. frontend calls `POST /api/training/session/start`
+4. backend creates one `training_sessions` row with `status="started"`
+
+### Evaluate
+
+Two possible input paths:
+
+- text response
+- audio response
+
+Frontend submits:
+
+- `session_id`
+- `transcript_text` for text exercises, or
+- audio file for microphone exercises
+
+Backend evaluates and writes:
+
+- transcript
+- accuracy score
+- fluency score
+- confidence score
+- pause and repetition counts
+- corrected text
+- feedback summary
+- final status
+
+### Save progress
+
+If a session is valid and completed:
+
+- backend recalculates module progress
+- `training_progress` is updated
+
+If a session is invalid:
+
+- status becomes `failed`
+- progress summary is not updated
+
+---
+
+## 9. Training Algorithms and Equations
+
+File:
+
+- `backend/app/services/training_service.py`
+
+## 9.1 Text normalization
+
+### Function
+
+```text
+normalize_text(text)
+```
+
+Rules:
+
+- lowercase
+- remove punctuation
+- collapse repeated spaces
+
+## 9.2 Accuracy for expected-answer drills
+
+Used when an exercise has a fixed expected text.
+
+### Equation
+
+```text
+accuracy = matched_words / total_expected_words
+```
+
+Where:
+
+- words are compared positionally after normalization
+
+## 9.3 Accuracy for open-response drills
+
+Used when `expected_text` is empty.
+
+### Equation
+
+```text
+open_response_score = min(word_count / OPEN_RESPONSE_TARGET_WORDS, 1.0)
+```
+
+Current constant:
+
+```text
+OPEN_RESPONSE_TARGET_WORDS = 6
+```
+
+Meaning:
+
+- longer complete responses get better completion scores
+- empty or very short responses score lower
+
+## 9.4 Repeated-word count
+
+### Logic
+
+Count repeated tokens when:
+
+- current word equals previous word
+- or current word equals the word two positions earlier
+
+Used as a simple fluency/stability signal.
+
+## 9.5 Long pause count
+
+### Logic
+
+Using transcript segments:
+
+```text
+long_pause_count = count(start_i - end_(i-1) >= 1.2 sec)
+```
+
+Current threshold:
+
+```text
+LONG_PAUSE_THRESHOLD_SEC = 1.2
+```
+
+## 9.6 Fluency for text drills
+
+### Equation
+
+```text
+fluency_ratio = clamp(1.0 - repeated_word_count * 0.1, 0, 1)
+```
+
+Because text exercises do not have pause timing.
+
+## 9.7 Fluency for audio drills
+
+### Equation
+
+```text
+fluency_ratio = 1.0
+fluency_ratio -= long_pause_count * 0.15
+fluency_ratio -= repeated_word_count * 0.1
+fluency_ratio = clamp(fluency_ratio, 0, 1)
+```
+
+## 9.8 Confidence score
+
+### Base equation
+
+```text
+confidence_ratio =
+min(
+  1.0,
+  accuracy_ratio * 0.5 +
+  fluency_ratio * 0.3 +
+  completion_bonus * 0.2
+)
+```
+
+For grammar text exercises, confidence is then blended with grammar improvement quality:
+
+```text
+grammar_boost = 1.0 - grammar_error_probability
+confidence_score = min(1.0, confidence_ratio * 0.8 + grammar_boost * 0.2)
+```
+
+## 9.9 Grammar training improvement
+
+For grammar exercises:
+
+- the training prompt and learner response are sent to grammar improvement logic
+- this uses the configured provider, with local Ollama as the intended local-model path
+- corrected output is saved as `corrected_text`
+
+Practical flow:
+
+```text
+exercise prompt + learner answer -> grammar improvement model -> improved sentence
+```
+
+## 9.10 No-speech / no-response handling
+
+Silent audio and empty text are now explicitly rejected in the training path.
+
+If no speech or no answer is detected:
+
+- `accuracy_score = 0`
+- `fluency_score = 0`
+- `confidence_score = 0`
+- session is marked `failed`
+- progress summary is not updated
+
+This prevents empty attempts from appearing successful.
+
+---
+
+## 10. Training Feedback Algorithm
+
+Training feedback is not generic anymore.
+
+Feedback logic is module-aware and exercise-aware:
+
+- `breath_voice`
+  - emphasizes breath support, vowel steadiness, and smooth voice onset
+- `articulation`
+  - emphasizes consonant clarity, mouth movement, minimal pairs, tongue-tip release
+- `fluency`
+  - emphasizes easy onset, pacing, natural pauses, reduced repeated starts
+- `grammar`
+  - emphasizes complete sentence building, corrected sentence comparison, and improved output reuse
+
+File:
+
+- `backend/app/services/training_service.py`
+
+This means the feedback shown after each session is tied to the specific training objective rather than using the same generic sentence for every exercise.
+
+---
+
+## 11. Training Progress Aggregation
+
+File:
+
+- `backend/app/services/training_service.py`
+
+The progress table stores one aggregated row per user per module.
+
+### Equations
+
+```text
+sessions_completed = count(completed sessions for user and module)
+avg_accuracy = mean(session.accuracy_score)
+avg_fluency = mean(session.fluency_score)
+best_score = max(session.confidence_score)
+```
+
+These values feed:
+
+- training home cards
+- dashboard snapshot
+- future module recommendations
+
+---
+
+## 12. Database Design
+
+File:
+
+- `backend/app/database/models.py`
+
+### Tables
+
+#### `users`
+
+Stores:
+
+- email
+- password hash
+- profile metadata
+
+#### `analyses`
+
+Stores one row per uploaded speech analysis:
+
+- transcript
+- dysarthria fields
+- stuttering fields
+- grammar fields
+- phonology fields
+- pause metrics
+- audio/report paths
+- status
+
+#### `training_sessions`
+
+Stores one row per training attempt:
+
+- user
+- module key
+- exercise key
+- prompt text
+- expected text
+- transcript
+- scores
+- counts
+- corrected text
+- feedback summary
+- status
+
+#### `training_progress`
+
+Stores per-user per-module aggregate progress:
+
+- sessions completed
+- average accuracy
+- average fluency
+- best score
+- last practiced time
+
+---
+
+## 13. Frontend Integration
+
+### Main route wiring
+
+File:
+
+- `speechwell-frontend/src/App.tsx`
+
+Training routes:
+
+- `/therapy-hub`
+- `/therapy-hub/:moduleKey`
+- `/therapy-hub/:moduleKey/:exerciseKey`
+- `/therapy-hub/session/:sessionId/result`
+
+### Main training UI files
+
+- `speechwell-frontend/src/pages/TherapyHub.tsx`
+- `speechwell-frontend/src/pages/TrainingModule.tsx`
+- `speechwell-frontend/src/pages/TrainingExercise.tsx`
+- `speechwell-frontend/src/pages/TrainingResult.tsx`
+- `speechwell-frontend/src/components/TrainingModuleCard.tsx`
+- `speechwell-frontend/src/components/ProgressBar.tsx`
+
+### Video practice integration
+
+The Therapy Hub also contains practice videos:
+
+- source data in `speechwell-frontend/src/data/practiceVideos.ts`
+- thumbnail extraction from YouTube video IDs
+- embedded video player on-page
+- original URLs preserved exactly
+
+This creates a hybrid training page:
+
+- structured exercises from backend
+- optional video-guided practice from curated YouTube links
+
+---
+
+## 14. Theme System
+
+Frontend theme behavior now uses:
+
+- `speechwell-frontend/src/utils/theme.ts`
+
+Current themes:
+
+- Lavender
+- Ocean
+- Forest
+- Dark
+
+Theme is applied through:
+
+- `data-theme` on `document.documentElement`
+- global CSS variables in `speechwell-frontend/src/index.css`
+
+Theme can be changed from:
+
+- navbar quick switch
+- profile settings page
+
+---
+
+## 15. API Summary
+
+### Auth
+
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `GET /api/profile`
+- `PUT /api/profile`
+
+### Analysis
+
 - `POST /api/analyze`
 - `GET /api/analyze/{audio_id}`
 - `GET /api/analyses`
 - `GET /api/reports/{audio_id}`
+
+### Training
+
+- `GET /api/training/modules`
+- `POST /api/training/session/start`
+- `POST /api/training/session/evaluate`
+- `GET /api/training/session/{session_id}`
+- `GET /api/training/sessions`
+- `GET /api/training/progress`
+
+### Chat
+
+- `POST /api/chat`
+
+### Health
+
 - `GET /api/health`
 
-## 8.2 Core analysis response fields
-- Identity: `id`, `audio_id`, `filename`, `created_at`, `status`
-- Dysarthria: `dysarthria_probability`, `dysarthria_label`
-- Stuttering: `stuttering_probability`, `stuttering_repetitions`, `stuttering_prolongations`, `stuttering_blocks`
-- Grammar: `grammar_score`, `grammar_error_count`, `corrected_text`
-- Phonology: `phonological_score`, `phonological_error_count`
-- Fluency metrics: `speaking_rate_wps`, `average_pause_sec`, `max_pause_sec`, `total_duration_sec`
-- Text/report artifacts: `transcript`, `pdf_path`
+---
 
-## 9. Database Design
-File: `backend/app/database/models.py`
+## 16. Important Current Limitations
 
-Tables:
-- `users`
-  - credential identity and profile fields
-- `analyses`
-  - one row per analyzed audio with all outputs and artifact paths
+1. Analysis upload still needs stricter no-speech rejection in the main analysis path, not only the training path.
+2. Stuttering repetition/prolongation detection is intentionally lightweight and transcript-driven, so it should be treated as screening logic rather than a clinical measurement.
+3. Training scoring is explainable and practical, but it is still rule-based rather than a full custom local acoustic model.
+4. The embedded YouTube player supports playback but does not replicate every full youtube.com feature.
+5. Video pagination for long categories is not yet implemented.
 
-Lifecycle states:
-- `processing` -> created before ML pipeline
-- `completed` -> scores + report persisted
-- `failed` -> fatal exception captured in `error_message`
+---
 
-## 10. Security and Access Control
-- Passwords hashed (PBKDF2 path; bcrypt compatibility path).
-- JWT bearer tokens used for authenticated API access.
-- Ownership checks enforced on result/report retrieval when user context exists.
-- CORS enabled for local frontend origins (plus wildcard in current dev config).
+## 17. Recommended Next Improvements
 
-## 11. Reliability and Failure Handling
-- Stage-level fallbacks in ML pipeline prevent total failure on partial model outages.
-- Backend records fatal processing errors into analysis row for observability.
-- Health endpoint (`/api/health`) provides basic service liveness check.
+1. Add silence detection directly into the analysis upload path so empty recordings fail before scoring.
+2. Introduce MFCC / mel-frequency features for training inference if moving toward a richer local speech model.
+3. Add pagination for video categories at 5 videos per page.
+4. Add automated tests for:
+   - auth
+   - upload analysis
+   - training start/evaluate/result
+   - theme switch persistence
+5. If schema cleanup is acceptable later, rename `grammar_score` to `grammar_quality_score` in the database for even clearer semantics.
 
-## 12. Main code logic inventory (concise)
+---
 
-### Frontend runtime
-- `speechwell-frontend/src/App.tsx`: route registry and page composition.
-- `speechwell-frontend/src/api/api.ts`: network API abstraction.
-- `speechwell-frontend/src/pages/Upload.tsx`: upload + recording + submit flow.
-- `speechwell-frontend/src/pages/Results.tsx`: detailed result visualization.
-- `speechwell-frontend/src/pages/Dashboard.tsx`: aggregated progress and risk summaries.
-- `speechwell-frontend/src/pages/History.tsx`: filterable history browsing.
-- `speechwell-frontend/src/pages/Reports.tsx`: downloadable reports list.
+## 18. Practical Architecture Summary
 
-### Backend runtime
-- `backend/app/main.py`: endpoint orchestration and persistence.
-- `backend/app/database/db.py`: DB engine/session setup.
-- `backend/app/database/models.py`: schema definition.
-- `backend/app/schemas.py`: request/response contracts.
-- `backend/app/services/auth_service.py`: auth/token logic.
-- `backend/app/services/pdf_report_service.py`: report generation.
+In one sentence:
 
-### ML runtime
-- `ml/services/speech_analysis_service.py`: analysis coordinator.
-- `ml/feature_extraction/extract_whisper.py`: transcript + timing features.
-- `ml/feature_extraction/extract_acoustic.py`: acoustic embeddings.
-- `backend/app/services/dysarthria_inference_service.py`: dysarthria classifier inference.
-- `backend/app/services/stuttering_service.py`: stuttering rule-based scorer.
-- `backend/app/services/grammar_service.py`: grammar error estimator.
-- `backend/app/services/phonological_service.py`: phonological rule scorer.
+SpeechWell uses one authenticated user system, one shared frontend shell, one shared backend/API layer, and two connected speech workflows:
 
-## 13. Large data/runtime directories
-- `ml/datasets/torgo/`: raw corpus files for training.
-- `storage/uploaded_audio/`: original uploaded user files.
-- `storage/processed_audio/`: normalized WAV files for analysis.
-- `storage/reports/`: generated PDF outputs.
-- `speechwell.db` / `backend/speechwell.db`: SQLite data stores, depending on startup working directory.
+- `analysis workflow` for upload -> inference -> report
+- `training workflow` for exercise -> evaluation -> progress
 
-## 14. Limitations and recommended improvements
-Current limitations:
-- Grammar field naming/semantics mismatch (`grammar_score` stores error probability).
-- Mixed methodology (ML + heuristics) can produce non-uniform calibration.
-- CORS dev configuration is permissive for production hardening.
-
-Recommended next improvements:
-1. Align grammar metric naming and frontend interpretation.
-2. Add calibration/threshold validation studies per output dimension.
-3. Add integration tests for full upload -> analyze -> report path.
-4. Add model/version metadata to analysis rows for traceability.
-5. Introduce structured observability (timings, model-stage logs).
-
-## 15. Compliance note
-SpeechWell outputs are AI-assisted analytical indicators and should be interpreted as supportive screening information, not standalone medical diagnosis.
-
-## 16. Algorithm Summary (All in One Place)
-This section is a quick-reference list of all core algorithms used in SpeechWell.
-
-### 16.1 Audio normalization (preprocessing)
-- Location: `backend/app/main.py` (`normalize_audio`)
-- Method: FFmpeg resampling and channel normalization
-- Operation: convert input to mono (`-ac 1`) and 16kHz (`-ar 16000`)
-- Purpose: ensure all downstream models receive consistent audio format.
-
-### 16.2 Transcript and fluency feature extraction
-- Location: `ml/feature_extraction/extract_whisper.py`
-- Model: Whisper `base`
-- Outputs:
-  - transcript text
-  - segment timestamps
-  - `speaking_rate_wps = total_words / total_duration_sec`
-  - `average_pause_sec = mean(inter-segment pauses)`
-  - `max_pause_sec = max(inter-segment pauses)`
-  - total duration
-- Purpose: generate linguistic and timing features used by multiple downstream scorers.
-
-### 16.3 Acoustic embedding extraction
-- Location: `ml/feature_extraction/extract_acoustic.py`
-- Model: `facebook/wav2vec2-base`
-- Steps:
-  - read waveform
-  - mono conversion (if multi-channel)
-  - resample to 16kHz
-  - run Wav2Vec2
-  - mean-pool hidden states
-- Output: fixed 768-dimensional embedding vector.
-
-### 16.4 Dysarthria classifier
-- Location: `backend/app/services/dysarthria_inference_service.py`
-- Artifacts:
-  - scaler: `dysarthria_scaler_v1.pkl`
-  - PCA: `dysarthria_pca_v1.pkl`
-  - model: `dysarthria_model_v1.pkl` (logistic regression)
-- Inputs:
-  - fluency vector: `[speaking_rate_wps, average_pause_sec, max_pause_sec]`
-  - acoustic embedding vector
-- Algorithm:
-  1. scale embedding
-  2. PCA transform
-  3. concatenate fluency + PCA features
-  4. compute probability with `predict_proba`
-- Decision rule:
-  - label `dysarthria` if probability `>= 0.5`, else `healthy`.
-
-### 16.5 Stuttering probability scorer
-- Location: `backend/app/services/stuttering_service.py`
-- Components:
-  - repetitions: adjacent identical words
-  - prolongations: repeated characters via regex `(.)\\1{3,}`
-  - blocks: segment gap `>= 1.0s`
-- Composite formula:
-  - `raw = 0.4*repetitions + 0.4*prolongations + 0.2*blocks`
-  - `stuttering_probability = min(raw / 5, 1.0)`
-- Purpose: estimate disfluency severity from transcript + timing cues.
-
-### 16.6 Grammar error probability estimator
-- Location: `backend/app/services/grammar_service.py`
-- Model: `prithivida/grammar_error_correcter_v1` (seq2seq correction)
-- Process:
-  1. generate corrected text
-  2. compare original vs corrected token counts
-  3. estimate error count with floor at 5% of original length
-- Formula:
-  - `diff = abs(len(original_words) - len(corrected_words))`
-  - `error_estimate = max(diff, int(0.05 * len(original_words)))`
-  - `grammar_error_probability = min(error_estimate / max(len(original_words), 1), 1.0)`
-- Output also includes AI-corrected transcript.
-
-### 16.7 Phonological error probability estimator
-- Location: `backend/app/services/phonological_service.py`
-- Method: rule-based phoneme substitution checks using CMU pronunciation lookup (`pronouncing`)
-- Rule examples:
-  - `R->W`, `K->T`, `G->D`, `S->TH`, `TH->F/D`, `L->W`
-- Formula:
-  - `phonological_error_probability = min(error_count / max(word_count, 1), 1.0)`
-- Output includes affected word list.
-
-### 16.8 End-to-end orchestration algorithm
-- Location: `ml/services/speech_analysis_service.py`
-- Flow:
-  1. Whisper features
-  2. Grammar analysis
-  3. Acoustic embedding
-  4. Dysarthria inference
-  5. Stuttering scoring
-  6. Phonological scoring
-  7. return combined structured result
-- Design property: stage-level fallback defaults prevent full pipeline collapse if one model fails.
-
-### 16.9 Frontend overall speech health score formula
-- Location: `speechwell-frontend/src/pages/Results.tsx`
-- Formula:
-  - `overallScore = round(((1 - dysarthria_probability) * 0.33 + (1 - stuttering_probability) * 0.33 + grammar_score * 0.34) * 100)`
-- Purpose: single dashboard-style percentage for user-friendly summary.
-
-### 16.10 PDF severity mapping algorithm
-- Location: `backend/app/services/pdf_report_service.py`
-- Severity bins for probability metrics:
-  - LOW: `< 0.30`
-  - MODERATE: `0.30 to < 0.60`
-  - HIGH: `>= 0.60`
-- Used to render report bars/colors for fast human interpretation.
-
-## 17. Data Flow Diagram (DFD Code)
-Use this Mermaid code in Markdown viewers that support Mermaid.
-
-```mermaid
-flowchart TD
-    U[User] --> FE[Frontend React App]
-    FE -->|Register/Login| AUTH[FastAPI Auth Endpoints]
-    AUTH --> DB[(SQLite Database)]
-    FE -->|Upload/Record Audio| API[POST /api/analyze]
-    API --> VAL[File Validation]
-    VAL --> NORM[FFmpeg Normalize Audio]
-    NORM --> PIPE[ML Pipeline Orchestrator]
-
-    PIPE --> W[Whisper Feature Extraction]
-    PIPE --> A[Wav2Vec2 Acoustic Embedding]
-    PIPE --> D[Dysarthria Inference]
-    PIPE --> S[Stuttering Scoring]
-    PIPE --> G[Grammar Error Estimation]
-    PIPE --> P[Phonological Rule Scoring]
-
-    W --> PIPE
-    A --> D
-    D --> PIPE
-    S --> PIPE
-    G --> PIPE
-    P --> PIPE
-
-    PIPE --> SAVE[Persist Analysis Result]
-    SAVE --> DB
-    SAVE --> PDF[PDF Report Generator]
-    PDF --> RPT[(Report Files)]
-    FE -->|Fetch Results/History| DB
-    FE -->|Download Report| RPT
-```
-
-## 18. Block Diagram (Code)
-```mermaid
-flowchart LR
-    subgraph Client[Client Layer]
-        UI[React Frontend]
-    end
-
-    subgraph API[Application Layer]
-        BE[FastAPI Backend]
-        AUTHS[Auth Service]
-        ORCH[Analysis Orchestrator]
-        PDFS[PDF Service]
-    end
-
-    subgraph ML[ML/Analytics Layer]
-        WHISPER[Whisper Features]
-        WAV2VEC[Acoustic Embeddings]
-        DYS[Dysarthria Model]
-        STUT[Stuttering Rules]
-        GRAM[Grammar Model]
-        PHON[Phonological Rules]
-    end
-
-    subgraph Data[Data Layer]
-        SQLITE[(SQLite)]
-        STORAGE[(Audio/Report Storage)]
-        MODELS[(Model Artifacts .pkl)]
-    end
-
-    UI --> BE
-    BE --> AUTHS
-    BE --> ORCH
-    ORCH --> WHISPER
-    ORCH --> WAV2VEC
-    ORCH --> DYS
-    ORCH --> STUT
-    ORCH --> GRAM
-    ORCH --> PHON
-    DYS --> MODELS
-    BE --> PDFS
-    BE --> SQLITE
-    BE --> STORAGE
-    PDFS --> STORAGE
-```
-
-## 19. Viva Script (Short, Ready-to-Speak)
-
-### 19.1 Project opening (30-45 sec)
-"SpeechWell is an AI-assisted speech analysis platform. A user uploads or records speech, the backend normalizes audio, then a multi-stage ML pipeline extracts transcript, acoustic and fluency features, and computes dysarthria, stuttering, grammar, and phonological indicators. Results are persisted in SQLite and exported as a downloadable PDF report."
-
-### 19.2 Architecture explanation
-"The frontend is React and handles authentication, upload/recording, and result visualization. FastAPI is the orchestration layer with endpoints for auth, analysis, history, and reports. ML components are modular: Whisper for transcript/timing, Wav2Vec2 for embeddings, logistic regression for dysarthria, and rule-based scorers for stuttering and phonology. All outputs are stored in the analyses table."
-
-### 19.3 Algorithm explanation summary
-"We use FFmpeg normalization first to control input variability. Whisper gives transcript and segment timing from which we compute speaking rate and pauses. Wav2Vec2 produces a 768-dimensional embedding. Dysarthria probability is predicted from fluency plus PCA-transformed acoustic features using a trained logistic model. Stuttering score is weighted from repetitions, prolongations, and block pauses. Grammar score is based on model-corrected text difference. Phonological score is rule-based over pronunciation lookups."
-
-### 19.4 Why this approach
-"We combine learned models and rule-based methods for balance: learned embeddings capture rich acoustic information while rule-based parts improve interpretability. This gives both performance and explainability for academic demonstration."
-
-### 19.5 Validation and reliability line
-"The system uses fail-safe defaults in each pipeline stage so partial model failures do not crash user flow. Backend stores processing status and error messages, and frontend exposes errors cleanly."
-
-### 19.6 Limitations line
-"This is a support and screening tool, not a medical diagnosis system. Also, grammar field naming currently stores error probability, so interpretation should be calibrated in future work."
-
-### 19.7 Future work line
-"Next steps include calibration studies, model/version traceability per analysis row, stronger automated integration tests, and production-grade security and observability."
-
-### 19.8 Likely viva Q&A
-Q: Why normalize audio to 16k mono?  
-A: To reduce model input variance and ensure consistent feature extraction across devices/files.
-
-Q: Why use both Whisper and Wav2Vec2?  
-A: Whisper provides transcript and timing semantics; Wav2Vec2 provides rich acoustic representation for motor-speech classification.
-
-Q: Why logistic regression for dysarthria?  
-A: It is stable, interpretable, and works well with engineered + PCA-reduced features for this dataset scale.
-
-Q: Is grammar score truly a quality score?  
-A: In current implementation it is grammar-error probability; naming should be aligned in a refinement pass.
-
-Q: How do you handle model failure?  
-A: Stage-level try/except fallbacks return safe defaults; fatal issues set analysis status to failed with error message.
-
-## 20. Model Evaluation Metrics (How They Are Calculated)
-This section explains the standard validation metrics used in `ml/evaluation/validate_accuracy.py`.
-
-### 20.1 Confusion matrix terms (binary dysarthria classification)
-For this project, treat **dysarthria** as the positive class.
-- TP (True Positive): model predicts dysarthria and actual label is dysarthria
-- TN (True Negative): model predicts healthy and actual label is healthy
-- FP (False Positive): model predicts dysarthria but actual label is healthy
-- FN (False Negative): model predicts healthy but actual label is dysarthria
-
-Confusion matrix shape (binary):
-```
-[[TN, FP],
- [FN, TP]]
-```
-
-### 20.2 Accuracy
-Definition: fraction of all samples predicted correctly.
-
-Formula:
-- `Accuracy = (TP + TN) / (TP + TN + FP + FN)`
-
-Interpretation:
-- High accuracy means overall correctness is high, but it can be misleading when classes are imbalanced.
-
-### 20.3 Precision
-Definition: out of all samples predicted as dysarthria, how many were truly dysarthria.
-
-Formula:
-- `Precision = TP / (TP + FP)`
-
-Interpretation:
-- High precision means fewer false alarms (fewer healthy samples incorrectly flagged as dysarthria).
-
-### 20.4 Recall (Sensitivity / True Positive Rate)
-Definition: out of all true dysarthria samples, how many the model correctly found.
-
-Formula:
-- `Recall = TP / (TP + FN)`
-
-Interpretation:
-- High recall means fewer missed dysarthria cases.
-
-### 20.5 F1 Score
-Definition: harmonic mean of precision and recall.
-
-Formula:
-- `F1 = 2 * (Precision * Recall) / (Precision + Recall)`
-
-Interpretation:
-- Useful when you need a balance between false positives and false negatives.
-
-### 20.6 Specificity (True Negative Rate)
-Definition: out of all true healthy samples, how many were correctly identified as healthy.
-
-Formula:
-- `Specificity = TN / (TN + FP)`
-
-Interpretation:
-- Complements recall by showing performance on the negative class.
-
-### 20.7 False Positive Rate (FPR) and False Negative Rate (FNR)
-Formulas:
-- `FPR = FP / (FP + TN) = 1 - Specificity`
-- `FNR = FN / (FN + TP) = 1 - Recall`
-
-Interpretation:
-- FPR captures false alarms.
-- FNR captures missed dysarthria detections.
-
-### 20.8 ROC-AUC (when probability outputs are used)
-Definition: area under ROC curve (TPR vs FPR across thresholds).
-
-Notes:
-- Requires probability scores (e.g., `predict_proba`) rather than only hard labels.
-- Values range from 0 to 1:
-  - `0.5` approx random
-  - closer to `1.0` is better separation
-
-### 20.9 PR-AUC (Precision-Recall AUC)
-Definition: area under precision-recall curve across thresholds.
-
-Notes:
-- Especially informative for imbalanced datasets.
-- Focuses on positive-class retrieval quality.
-
-### 20.10 Macro, micro, and weighted averaging (multi-class/general reporting)
-`classification_report` can show these averages:
-- Macro average: unweighted mean across classes
-  - treats each class equally
-- Weighted average: class-frequency-weighted mean
-  - influenced by majority class
-- Micro average: computes global TP/FP/FN across all classes before metric calculation
-  - equivalent to accuracy in some settings
-
-### 20.11 Metrics currently computed in this project script
-File: `ml/evaluation/validate_accuracy.py`
-
-The script currently computes and prints:
-- `accuracy_score`
-- `precision_score`
-- `recall_score`
-- `f1_score`
-- `confusion_matrix`
-- `classification_report`
-
-Current implementation details:
-- Uses predicted labels from `model.predict(x)` (single threshold behavior from model)
-- Uses `zero_division=0` to avoid division-by-zero crashes when a class has no predicted positives
-- Optionally exports JSON report with core metrics via `--save-json`
-
-### 20.12 Why multiple metrics are required
-No single metric is sufficient:
-- Accuracy gives global correctness
-- Precision controls false alarms
-- Recall controls missed dysarthria detections
-- F1 balances precision/recall
-- Confusion matrix reveals exact error pattern
-
-For viva/defense, report at least:
-- Accuracy, Precision, Recall, F1
-- Confusion Matrix
-- (Recommended) ROC-AUC and PR-AUC when probability outputs are available
-
-## 21. Module-Oriented Project Architecture (3 Modules)
-This section reframes SpeechWell into the required three-module design.
-
-## 21.1 Module 1: Audio Capture, Extraction, and Preprocessing
-Scope:
-- Audio upload (file-based)
-- Live audio recording (browser microphone)
-- Audio normalization and standardization
-- Core feature extraction inputs for downstream analytics
-
-Primary files:
-- Frontend:
-  - `speechwell-frontend/src/pages/Upload.tsx`
-  - `speechwell-frontend/src/api/api.ts`
-- Backend orchestration:
-  - `backend/app/main.py` (`/api/analyze`, `normalize_audio`)
-- Feature extraction:
-  - `ml/feature_extraction/extract_whisper.py`
-  - `ml/feature_extraction/extract_acoustic.py`
-
-Step-by-step process:
-1. User uploads/records audio in frontend.
-2. Frontend sends multipart request to `POST /api/analyze`.
-3. Backend validates format (wav/mp3/webm/ogg/m4a).
-4. Backend stores original file to `storage/uploaded_audio/`.
-5. Backend normalizes audio using FFmpeg:
-   - mono conversion and 16kHz resampling.
-6. Backend stores processed WAV in `storage/processed_audio/`.
-7. Feature extraction begins:
-   - Whisper transcript + timing segments.
-   - Wav2Vec2 acoustic embedding.
-
-Core equations (Module 1):
-- Segment duration:
-  - `dur_i = end_i - start_i`
-- Total duration:
-  - `total_duration_sec = sum(dur_i)`
-- Pause between segments:
-  - `pause_i = max(0, start_i - end_(i-1))`
-- Speaking rate:
-  - `speaking_rate_wps = total_words / total_duration_sec`
-- Average pause:
-  - `average_pause_sec = mean(pause_i)`
-- Max pause:
-  - `max_pause_sec = max(pause_i)`
-
-Module 1 output:
-- transcript
-- segment timestamps
-- speaking-rate and pause metrics
-- acoustic embedding vector
-- normalized audio artifact for reproducible inference
-
-## 21.2 Module 2: Rule-Based + Model-Based Speech Intelligence
-Scope:
-- Dysarthria classification (ML model)
-- Stuttering estimation (rule-based)
-- Grammar correction and grammar-error probability
-- Phonological error estimation (rule-based)
-- Consolidated inference decision payload
-
-Primary files:
-- Orchestration:
-  - `ml/services/speech_analysis_service.py`
-- Model-based:
-  - `backend/app/services/dysarthria_inference_service.py`
-  - `backend/app/services/grammar_service.py`
-- Rule-based:
-  - `backend/app/services/stuttering_service.py`
-  - `backend/app/services/phonological_service.py`
-
-Step-by-step process:
-1. Module 2 receives Module 1 outputs.
-2. Dysarthria path:
-   - scale acoustic embedding
-   - apply PCA
-   - concatenate with fluency features
-   - run logistic regression probability inference
-3. Stuttering path:
-   - detect repetitions, prolongations, and speech blocks
-   - compute weighted stuttering probability
-4. Grammar path:
-   - run seq2seq grammar correction model
-   - compare original and corrected token patterns
-   - estimate grammar-error probability and corrected text
-5. Phonological path:
-   - use CMU pronunciation lookups and substitution rules
-   - compute phonological error probability
-6. Aggregate all scores and details into one analysis object.
-
-Core equations (Module 2):
-- Dysarthria probability from classifier:
-  - `p_dys = model.predict_proba(X)[0][1]`
-- Dysarthria label:
-  - `label = "dysarthria" if p_dys >= 0.5 else "healthy"`
-
-- Stuttering composite:
-  - `raw_stutter = 0.4*repetitions + 0.4*prolongations + 0.2*blocks`
-  - `stuttering_probability = min(raw_stutter / 5, 1.0)`
-
-- Grammar error estimator:
-  - `diff = abs(len(original_words) - len(corrected_words))`
-  - `error_estimate = max(diff, int(0.05 * len(original_words)))`
-  - `grammar_error_probability = min(error_estimate / max(len(original_words), 1), 1.0)`
-
-- Phonological error probability:
-  - `phonological_error_probability = min(error_count / max(word_count, 1), 1.0)`
-
-Module 2 output:
-- dysarthria probability + label
-- stuttering probability + event counts
-- grammar error probability + corrected transcript
-- phonological error probability + affected tokens
-
-## 21.3 Module 3: Progress Tracking, Reporting, and Training Support
-Scope:
-- Persistent storage of analysis results
-- Dashboard analytics and historical progress tracking
-- Downloadable PDF report generation
-- Therapy/training resources (videos/exercises)
-
-Primary files:
-- Backend persistence and reports:
-  - `backend/app/main.py`
-  - `backend/app/database/models.py`
-  - `backend/app/services/pdf_report_service.py`
-- Frontend progress/report/training:
-  - `speechwell-frontend/src/pages/Dashboard.tsx`
-  - `speechwell-frontend/src/pages/History.tsx`
-  - `speechwell-frontend/src/pages/Reports.tsx`
-  - `speechwell-frontend/src/pages/TherapyHub.tsx`
-
-Step-by-step process:
-1. Module 3 receives finalized analysis payload from Module 2.
-2. Backend updates `analyses` table with all computed fields and status.
-3. Backend generates PDF report and stores it in `storage/reports/`.
-4. Frontend fetches:
-   - current analysis (`/api/analyze/{audio_id}`)
-   - history (`/api/analyses`)
-   - report binary (`/api/reports/{audio_id}`)
-5. Dashboard and history pages compute trends and risk summaries.
-6. Therapy Hub recommends curated speech training exercises/videos.
-
-Core equations (Module 3 UI-level):
-- Dashboard average dysarthria (%):
-  - `avgDysarthria = round(mean(dysarthria_probability) * 100)`
-- Dashboard average stuttering (%):
-  - `avgStuttering = round(mean(stuttering_probability) * 100)`
-- Dashboard grammar display (%):
-  - `avgGrammar = round(mean(grammar_score) * 100)`
-
-- Results page overall score:
-  - `overallScore = round(((1 - dysarthria_probability)*0.33 + (1 - stuttering_probability)*0.33 + grammar_score*0.34) * 100)`
-
-Severity threshold logic (reporting bands):
-- LOW: `< 0.30`
-- MODERATE: `0.30 to < 0.60`
-- HIGH: `>= 0.60`
-
-Module 3 output:
-- longitudinal progress view
-- downloadable PDF evidence/report
-- training guidance for continuous improvement
-
-## 21.4 Complete Architecture in Mermaid (Module-Based)
-```mermaid
-flowchart TB
-    U[User] --> FE[React Frontend]
-
-    subgraph M1[Module 1: Audio Capture, Extraction, Preprocessing]
-        M1A[Upload or Live Record]
-        M1B[POST /api/analyze]
-        M1C[File Validation]
-        M1D[Store Original Audio]
-        M1E[FFmpeg Normalize<br/>mono + 16kHz]
-        M1F[Whisper Features<br/>transcript + segments + pauses]
-        M1G[Wav2Vec2 Embedding<br/>acoustic vector]
-    end
-
-    subgraph M2[Module 2: Rule-Based + Model-Based Intelligence]
-        M2A[Dysarthria Path<br/>Scaler + PCA + Logistic Regression]
-        M2B[Stuttering Rules<br/>repetition/prolongation/block]
-        M2C[Grammar Correction Model<br/>error probability]
-        M2D[Phonological Rules<br/>substitution checks]
-        M2E[Unified Decision Payload]
-    end
-
-    subgraph M3[Module 3: Progress Tracking, Reports, Training]
-        M3A[(SQLite: users + analyses)]
-        M3B[PDF Report Generator]
-        M3C[(storage/reports)]
-        M3D[Dashboard + History + Reports]
-        M3E[Therapy Hub<br/>training videos/exercises]
-    end
-
-    U --> M1A
-    FE --> M1A
-    M1A --> M1B --> M1C --> M1D --> M1E
-    M1E --> M1F
-    M1E --> M1G
-
-    M1F --> M2A
-    M1G --> M2A
-    M1F --> M2B
-    M1F --> M2C
-    M1F --> M2D
-
-    M2A --> M2E
-    M2B --> M2E
-    M2C --> M2E
-    M2D --> M2E
-
-    M2E --> M3A
-    M2E --> M3B
-    M3B --> M3C
-
-    M3A --> M3D
-    M3C --> M3D
-    M3D --> FE
-    M3E --> FE
-```
-
-## 21.5 Module-Wise Sequence (Step-by-Step Mermaid)
-```mermaid
-sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant Module1 as Module 1
-    participant Module2 as Module 2
-    participant Module3 as Module 3
-    participant DB as SQLite
-    participant Storage as Report Storage
-
-    User->>Frontend: Upload/Record speech
-    Frontend->>Backend: POST /api/analyze (audio)
-    Backend->>Module1: Validate + normalize + extract features
-    Module1-->>Backend: transcript + timing + embedding
-
-    Backend->>Module2: Run model/rule decisions
-    Module2-->>Backend: dysarthria/stuttering/grammar/phonology scores
-
-    Backend->>DB: Save analysis results and status
-    Backend->>Module3: Generate PDF + prepare progress data
-    Module3->>Storage: Save report file
-
-    Frontend->>Backend: GET analysis/history/report
-    Backend->>DB: Fetch stored records
-    Backend->>Storage: Fetch report binary
-    Backend-->>Frontend: Results + progress + downloadable PDF
-```
+That is the core design of the project as it exists now.

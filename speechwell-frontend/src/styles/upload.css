@@ -17,7 +17,7 @@
 }
 
 .upload-header h1 {
-  color: #11395f;
+  color: var(--text-strong);
   margin-bottom: 0.35rem;
 }
 
@@ -62,8 +62,12 @@
 .recording-box,
 .upload-actions {
   border-radius: var(--radius-md);
-  border: 1px solid rgba(208, 225, 242, 0.9);
-  background: linear-gradient(180deg, #fff, #f9fcff);
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 94%, transparent),
+    color-mix(in srgb, var(--surface-elevated) 92%, transparent)
+  );
   box-shadow: var(--shadow-sm);
 }
 
@@ -73,11 +77,11 @@
 }
 
 .drag-drop {
-  border: 2px dashed #bfd5e8;
+  border: 2px dashed color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 14px;
   min-height: 300px;
   padding: 1.2rem;
-  background: #f8fcff;
+  background: color-mix(in srgb, var(--surface-soft) 86%, var(--surface));
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -88,7 +92,7 @@
 
 .drag-drop.active {
   border-color: var(--primary);
-  background: #eef6ff;
+  background: color-mix(in srgb, var(--primary) 9%, var(--surface-soft));
   transform: translateY(-2px);
 }
 
@@ -101,7 +105,7 @@
 }
 
 .drag-drop h2 {
-  color: #113b63;
+  color: var(--text-strong);
   margin-bottom: 0.2rem;
 }
 
@@ -125,9 +129,9 @@
 .selected-file {
   margin: 0.72rem 0;
   border-radius: 10px;
-  border: 1px solid rgba(42, 157, 102, 0.25);
-  background: #ebf9f0;
-  color: #1f7f51;
+  border: 1px solid color-mix(in srgb, var(--success) 28%, var(--border));
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+  color: color-mix(in srgb, var(--success) 78%, var(--text-strong));
   padding: 0.5rem 0.62rem;
   font-weight: 700;
   font-size: 0.9rem;
@@ -135,7 +139,7 @@
 
 .file-size-info {
   font-size: 0.78rem;
-  color: #8ca3b9;
+  color: var(--text-muted);
 }
 
 .recording-box {
@@ -147,7 +151,7 @@
 }
 
 .recording-box h3 {
-  color: #123e67;
+  color: var(--text-strong);
   margin-bottom: 0.8rem;
 }
 
@@ -159,7 +163,11 @@
   place-items: center;
   margin-bottom: 0.8rem;
   position: relative;
-  background: radial-gradient(circle at 40% 32%, #effff8 0, #e5f4ff 75%);
+  background: radial-gradient(
+    circle at 40% 32%,
+    color-mix(in srgb, var(--success) 10%, var(--surface)) 0,
+    color-mix(in srgb, var(--primary) 12%, var(--surface-soft)) 75%
+  );
 }
 
 .microphone-icon {
@@ -197,7 +205,7 @@
 
 .recording-note {
   font-size: 0.82rem;
-  color: #8ca3b9;
+  color: var(--text-muted);
 }
 
 .error-message {
@@ -216,7 +224,7 @@
   height: 10px;
   border-radius: 999px;
   overflow: hidden;
-  background: #edf3fa;
+  background: color-mix(in srgb, var(--border) 74%, transparent);
   margin-bottom: 0.65rem;
 }
 
@@ -251,7 +259,7 @@
 @media (max-width: 860px) {
   .upload-content {
     margin-left: 0;
-    padding-bottom: 92px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 
   .upload-filters {
@@ -269,8 +277,13 @@
 }
 
 @media (max-width: 520px) {
+  .upload-content {
+    padding-inline: 0.75rem;
+  }
+
   .drag-drop {
     min-height: 240px;
+    padding-inline: 0.85rem;
   }
 
   .filter-group {

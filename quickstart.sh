@@ -1,45 +1,37 @@
 #!/bin/bash
 # File Logic Summary: Shell bootstrap helper that automates environment setup and service startup for local development.
-# SpeechWell Quick Start Script
 
 echo "================================"
 echo "SpeechWell - Quick Start Setup"
 echo "================================"
 echo ""
 
-# Check Python installation
-echo "✓ Checking Python..."
+echo "Checking Python..."
 if ! command -v python &> /dev/null; then
-    echo "✗ Python not found. Please install Python 3.9+"
+    echo "Python not found. Please install Python 3.9+"
     exit 1
 fi
 
-# Install backend dependencies
-echo "✓ Installing backend dependencies..."
-cd backend
+echo "Installing backend dependencies..."
 pip install -r requirements.txt --quiet
-if [ $? -eq 0 ]; then
-    echo "✓ Backend dependencies installed"
-else
-    echo "✗ Failed to install dependencies"
+if [ $? -ne 0 ]; then
+    echo "Failed to install backend dependencies"
     exit 1
 fi
 
-# Check if ML models exist
-echo "✓ Checking ML models..."
-if [ ! -f "ml/models/dysarthria_model_v1.pkl" ]; then
-    echo "⚠ ML models not found. Running training..."
-    python ml/training/train_dysarthria_model.py
+echo "Checking ML models..."
+if [ ! -f "ml/models/dysarthria_model_v2_rf_svc_ensemble.pkl" ]; then
+    echo "Latest ensemble model not found."
+    echo "Train it with: python ml/training/train_dysarthria_rf_svc_ensemble.py --group-aware"
+else
+    echo "Latest ensemble model found"
 fi
 
-# Install frontend dependencies
-echo "✓ Installing frontend dependencies..."
-cd ../speechwell-frontend
+echo "Installing frontend dependencies..."
+cd speechwell-frontend || exit 1
 npm install --quiet
-if [ $? -eq 0 ]; then
-    echo "✓ Frontend dependencies installed"
-else
-    echo "✗ Failed to install frontend dependencies"
+if [ $? -ne 0 ]; then
+    echo "Failed to install frontend dependencies"
     exit 1
 fi
 
@@ -48,18 +40,8 @@ echo "================================"
 echo "Setup Complete!"
 echo "================================"
 echo ""
-echo "To start the application:"
+echo "Start the backend:"
+echo "python -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000"
 echo ""
-echo "1. Start Backend (Terminal 1):"
-echo "   uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000"
-echo ""
-echo "2. Start Frontend (Terminal 2):"
-echo "   cd speechwell-frontend"
-echo "   npm run dev"
-echo ""
-echo "3. Open browser to: http://localhost:5173"
-echo ""
-echo "Backend API: http://localhost:8000"
-echo ""
-echo "For detailed documentation, see: INTEGRATION_GUIDE.md"
-
+echo "Start the frontend:"
+echo "cd speechwell-frontend && npm run dev"

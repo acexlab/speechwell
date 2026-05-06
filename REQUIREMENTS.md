@@ -42,7 +42,7 @@ Copy-Item .env.example .env
 
 # Edit .env for chat features (optional if chat is not used)
 # CHAT_PROVIDER=auto
-# OLLAMA_BASE_URL=http://127.0.0.1:11434
+# OLLAMA_BASE_URL=http://127.0.0.1:11435
 # OLLAMA_MODEL=qwen2.5:30b
 #
 # Optional cloud providers:
@@ -58,15 +58,17 @@ Notes:
 - Core analysis (upload + ML pipeline) runs without chat keys.
 
 ### Step 2.4: Ensure ML model artifacts exist
-Required files in `ml/models/`:
+Primary active file in `ml/models/`:
+- `dysarthria_model_v2_rf_svc_ensemble.pkl`
+
+Legacy fallback files may also exist:
 - `dysarthria_model_v1.pkl`
 - `dysarthria_pca_v1.pkl`
 - `dysarthria_scaler_v1.pkl`
 
-If any are missing:
+If the latest ensemble model is missing:
 ```powershell
-# Train baseline dysarthria model (generates model artifacts)
-python ml/training/train_dysarthria_model.py
+.\venv\Scripts\python.exe ml/training/train_dysarthria_rf_svc_ensemble.py --group-aware
 ```
 
 ### Step 2.5: Start the backend API

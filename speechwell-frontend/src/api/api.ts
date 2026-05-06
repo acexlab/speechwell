@@ -43,6 +43,7 @@ export interface AnalysisResult {
   id: number;
   audio_id: string;
   filename: string;
+  overall_score: number;
   dysarthria_probability: number;
   dysarthria_label: string;
   stuttering_probability: number;
@@ -50,6 +51,7 @@ export interface AnalysisResult {
   stuttering_prolongations: number;
   stuttering_blocks: number;
   grammar_score: number;
+  grammar_error_probability?: number;
   grammar_error_count: number;
   phonological_score: number;
   phonological_error_count: number;
@@ -60,6 +62,7 @@ export interface AnalysisResult {
   max_pause_sec: number;
   total_duration_sec: number;
   pdf_path?: string;
+  report_filename?: string;
   status: string;
   created_at: string;
 }
@@ -68,6 +71,7 @@ export interface HistoryItem {
   id: number;
   audio_id: string;
   filename: string;
+  report_filename?: string;
   dysarthria_probability: number;
   stuttering_probability: number;
   grammar_score: number;
@@ -77,6 +81,79 @@ export interface HistoryItem {
 export interface ChatMessagePayload {
   role: "user" | "assistant";
   text: string;
+}
+
+export interface TrainingExercise {
+  key: string;
+  title: string;
+  description: string;
+  input_mode: "mic" | "text" | "click";
+  prompt_text?: string;
+  expected_text?: string;
+  difficulty?: string;
+}
+
+export interface TrainingModule {
+  key: string;
+  title: string;
+  description: string;
+  focus_area: string;
+  exercise_count: number;
+  exercises: TrainingExercise[];
+}
+
+export interface TrainingSessionStartResponse {
+  session_id: number;
+  module_key: string;
+  exercise_key: string;
+  prompt_text?: string;
+  expected_text?: string;
+  input_mode: "mic" | "text" | "click";
+  status: string;
+}
+
+export interface TrainingSession {
+  id: number;
+  user_id: number;
+  module_key: string;
+  exercise_key: string;
+  prompt_text?: string;
+  expected_text?: string;
+  transcript?: string;
+  input_mode: "mic" | "text" | "click";
+  accuracy_score: number;
+  fluency_score: number;
+  confidence_score: number;
+  long_pause_count: number;
+  repeated_word_count: number;
+  duration_sec: number;
+  feedback_summary?: string;
+  corrected_text?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrainingEvaluationResult {
+  session_id: number;
+  transcript: string;
+  accuracy_score: number;
+  fluency_score: number;
+  confidence_score: number;
+  long_pause_count: number;
+  repeated_word_count: number;
+  duration_sec: number;
+  corrected_text?: string;
+  feedback: string[];
+}
+
+export interface TrainingProgress {
+  module_key: string;
+  sessions_completed: number;
+  avg_accuracy: number;
+  avg_fluency: number;
+  best_score: number;
+  last_practiced_at?: string | null;
 }
 
 // Helper function to get authorization header
@@ -263,7 +340,7 @@ export async function getAnalysisHistory(): Promise<HistoryItem[]> {
 
 // ============ REPORT ENDPOINTS ============
 
-export async function downloadReport(audioId: string): Promise<Blob> {
+export async function downloadReport(audioId: string): Promise<{ blob: Blob; filename?: string }> {
   const response = await fetch(`${API_BASE_URL}/api/reports/${audioId}`, {
     method: "GET",
     headers: {
@@ -276,7 +353,13 @@ export async function downloadReport(audioId: string): Promise<Blob> {
     throw new Error(error.detail || "Failed to download report");
   }
 
-  return response.blob();
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const filenameMatch =
+    disposition.match(/filename\*=UTF-8''([^;]+)/i) ||
+    disposition.match(/filename="?([^";]+)"?/i);
+  const filename = filenameMatch?.[1] ? decodeURIComponent(filenameMatch[1]) : undefined;
+  return { blob, filename };
 }
 
 // ============ UTILITY ENDPOINTS ============
@@ -313,5 +396,125 @@ export async function sendChatMessage(
 
   const data = await response.json();
   return data.reply as string;
+}
+
+// ============ TRAINING ENDPOINTS ============
+
+export async function getTrainingModules(): Promise<TrainingModule[]> {
+  const response = await fetch(`${API_BASE_URL}/api/training/modules`, {
+    method: "GET",
+    headers: {
+      ...getAuthHeader(),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to fetch training modules");
+  }
+
+  return response.json();
+}
+
+export async function startTrainingSession(
+  moduleKey: string,
+  exerciseKey: string
+): Promise<TrainingSessionStartResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/training/session/start`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify({
+      module_key: moduleKey,
+      exercise_key: exerciseKey,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to start training session");
+  }
+
+  return response.json();
+}
+
+export async function evaluateTrainingSession(input: {
+  sessionId: number;
+  textAnswer?: string;
+  audioFile?: File | null;
+}): Promise<TrainingEvaluationResult> {
+  const formData = new FormData();
+  formData.append("session_id", String(input.sessionId));
+  if (input.textAnswer) {
+    formData.append("transcript_text", input.textAnswer);
+  }
+  if (input.audioFile) {
+    formData.append("file", input.audioFile);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/training/session/evaluate`, {
+    method: "POST",
+    headers: {
+      ...getAuthHeader(),
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to evaluate training session");
+  }
+
+  return response.json();
+}
+
+export async function getTrainingSession(sessionId: number): Promise<TrainingSession> {
+  const response = await fetch(`${API_BASE_URL}/api/training/session/${sessionId}`, {
+    method: "GET",
+    headers: {
+      ...getAuthHeader(),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to fetch training session");
+  }
+
+  return response.json();
+}
+
+export async function getTrainingSessions(): Promise<TrainingSession[]> {
+  const response = await fetch(`${API_BASE_URL}/api/training/sessions`, {
+    method: "GET",
+    headers: {
+      ...getAuthHeader(),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to fetch training sessions");
+  }
+
+  return response.json();
+}
+
+export async function getTrainingProgress(): Promise<TrainingProgress[]> {
+  const response = await fetch(`${API_BASE_URL}/api/training/progress`, {
+    method: "GET",
+    headers: {
+      ...getAuthHeader(),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to fetch training progress");
+  }
+
+  return response.json();
 }
 

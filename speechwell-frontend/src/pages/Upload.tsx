@@ -12,8 +12,6 @@ import "../styles/upload.css";
 export default function Upload() {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedSkill, setSelectedSkill] = useState("All Skills");
-  const [selectedCondition, setSelectedCondition] = useState("Dysarthria");
   const [isRecording, setIsRecording] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -91,7 +89,10 @@ export default function Upload() {
         setUploadProgress(progress);
       });
 
-      navigate(`/results`, { state: { audioId: result.audio_id } });
+      sessionStorage.setItem("speechwell_last_audio_id", result.audio_id);
+      navigate(`/results?audioId=${encodeURIComponent(result.audio_id)}`, {
+        state: { audioId: result.audio_id },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
       setUploadProgress(0);
@@ -189,37 +190,6 @@ export default function Upload() {
             Upload your speech audio for analysis. Our AI models will detect
             dysarthria, stuttering, grammar errors, and other speech patterns.
           </p>
-        </div>
-
-        <div className="upload-filters">
-          <div className="filter-group">
-            <label htmlFor="skill-select">Analysis Type</label>
-            <select
-              id="skill-select"
-              value={selectedSkill}
-              onChange={(e) => setSelectedSkill(e.target.value)}
-              className="filter-select"
-            >
-              <option>All Skills</option>
-              <option>Dysarthria</option>
-              <option>Stuttering</option>
-              <option>Fluency</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label htmlFor="condition-select">Primary Concern</label>
-            <select
-              id="condition-select"
-              value={selectedCondition}
-              onChange={(e) => setSelectedCondition(e.target.value)}
-              className="filter-select"
-            >
-              <option>Dysarthria</option>
-              <option>Stuttering</option>
-              <option>Fluency</option>
-            </select>
-          </div>
         </div>
 
         <div className="upload-container">

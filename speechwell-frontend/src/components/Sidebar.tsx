@@ -44,13 +44,6 @@ export default function Sidebar() {
           </div>
           <span>SpeechWell</span>
         </div>
-
-        <div className="sidebar-search">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 10-.71.71l.27.28v.79L20 21.49 21.49 20 15.5 14zM10 15a5 5 0 110-10 5 5 0 010 10z" />
-          </svg>
-          <input type="text" placeholder="Search..." aria-label="Search navigation" />
-        </div>
       </div>
 
       <nav className="sidebar-nav">
@@ -75,13 +68,6 @@ export default function Sidebar() {
           <span>Train Your Speech</span>
         </Link>
 
-        <Link to="/analytics" className={`nav-item ${isActive("/analytics") ? "active" : ""}`}>
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 19h16v2H2V3h2v16zm3-3h2V9H7v7zm4 0h2V5h-2v11zm4 0h2v-4h-2v4z" />
-          </svg>
-          <span>Analytics</span>
-        </Link>
-
         <Link to="/ai-chat" className={`nav-item ${isActive("/ai-chat") ? "active" : ""}`}>
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M4 4h16v11H7l-3 3V4zm2 2v7.17L6.17 13H18V6H6zm2 2h8v2H8V8zm0 3h5v2H8v-2z" />
@@ -93,14 +79,7 @@ export default function Sidebar() {
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M13 3a9 9 0 100 18 9 9 0 000-18zm1 10h-4V7h2v4h2v2z" />
           </svg>
-          <span>History</span>
-        </Link>
-
-        <Link to="/reports" className={`nav-item ${isActive("/reports") ? "active" : ""}`}>
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7 3h10l4 4v14H3V3h4zm7 1.5V8h3.5L14 4.5zM6 12h12v2H6zm0 4h12v2H6z" />
-          </svg>
-          <span>Reports</span>
+          <span>History & Reports</span>
         </Link>
 
         <Link to="/profile" className={`nav-item ${isActive("/profile") ? "active" : ""}`}>

@@ -70,6 +70,7 @@ class AnalysisResponse(BaseModel):
     filename: str
     
     # Results
+    overall_score: int
     dysarthria_probability: float
     dysarthria_label: str
     stuttering_probability: float
@@ -84,6 +85,7 @@ class AnalysisResponse(BaseModel):
     
     # Files
     pdf_path: Optional[str]
+    report_filename: Optional[str] = None
     
     # Metadata
     status: str
@@ -97,6 +99,7 @@ class AnalysisDetailResponse(AnalysisResponse):
     stuttering_repetitions: int
     stuttering_prolongations: int
     stuttering_blocks: int
+    grammar_error_probability: Optional[float] = None
     grammar_error_count: int
     phonological_error_count: int
     corrected_text: Optional[str]
@@ -107,6 +110,7 @@ class HistoryResponse(BaseModel):
     id: int
     audio_id: str
     filename: str
+    report_filename: Optional[str] = None
     dysarthria_probability: float
     stuttering_probability: float
     grammar_score: float
@@ -130,4 +134,86 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+# ============ TRAINING SCHEMAS ============
+class TrainingExerciseResponse(BaseModel):
+    key: str
+    title: str
+    description: str
+    input_mode: str
+    prompt_text: Optional[str] = None
+    expected_text: Optional[str] = None
+    difficulty: Optional[str] = None
+
+
+class TrainingModuleResponse(BaseModel):
+    key: str
+    title: str
+    description: str
+    focus_area: str
+    exercise_count: int
+    exercises: list[TrainingExerciseResponse]
+
+
+class TrainingSessionStartRequest(BaseModel):
+    module_key: str
+    exercise_key: str
+
+
+class TrainingSessionStartResponse(BaseModel):
+    session_id: int
+    module_key: str
+    exercise_key: str
+    prompt_text: Optional[str] = None
+    expected_text: Optional[str] = None
+    input_mode: str
+    status: str
+
+
+class TrainingSessionResponse(BaseModel):
+    id: int
+    user_id: int
+    module_key: str
+    exercise_key: str
+    prompt_text: Optional[str] = None
+    expected_text: Optional[str] = None
+    transcript: Optional[str] = None
+    input_mode: str
+    accuracy_score: float
+    fluency_score: float
+    confidence_score: float
+    long_pause_count: int
+    repeated_word_count: int
+    duration_sec: float
+    feedback_summary: Optional[str] = None
+    corrected_text: Optional[str] = None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TrainingEvaluationResponse(BaseModel):
+    session_id: int
+    transcript: str
+    accuracy_score: int
+    fluency_score: int
+    confidence_score: int
+    long_pause_count: int
+    repeated_word_count: int
+    duration_sec: float
+    corrected_text: Optional[str] = None
+    feedback: list[str]
+
+
+class TrainingProgressResponse(BaseModel):
+    module_key: str
+    sessions_completed: int
+    avg_accuracy: int
+    avg_fluency: int
+    best_score: int
+    last_practiced_at: Optional[datetime] = None
 

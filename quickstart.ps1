@@ -32,13 +32,13 @@ if ($LASTEXITCODE -eq 0) {
     exit 1
 }
 
-# Check if ML models exist
+# Check if current ML model exists
 Write-Host ">> Checking ML models..." -ForegroundColor Yellow
-if (-Not (Test-Path "ml/models/dysarthria_model_v1.pkl")) {
-    Write-Host "WARN: ML models not found. Please train them manually." -ForegroundColor Yellow
-    Write-Host "Run: python ml/training/train_dysarthria_model.py" -ForegroundColor Yellow
+if (-Not (Test-Path "ml/models/dysarthria_model_v2_rf_svc_ensemble.pkl")) {
+    Write-Host "WARN: Latest ensemble model not found. Please train it manually." -ForegroundColor Yellow
+    Write-Host "Run: .\\venv\\Scripts\\python.exe ml/training/train_dysarthria_rf_svc_ensemble.py --group-aware" -ForegroundColor Yellow
 } else {
-    Write-Host "OK: ML models found" -ForegroundColor Green
+    Write-Host "OK: Latest ensemble model found" -ForegroundColor Green
 }
 
 # Install frontend dependencies

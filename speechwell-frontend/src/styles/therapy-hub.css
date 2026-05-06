@@ -242,7 +242,7 @@
 @media (max-width: 860px) {
   .therapy-content {
     margin-left: 0;
-    padding-bottom: 92px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 
   .therapy-filters {
@@ -261,6 +261,11 @@
 }
 
 @media (max-width: 520px) {
+  .therapy-content {
+    padding-inline: 0.75rem;
+  }
+
+  .resource-grid,
   .exercises-grid {
     grid-template-columns: 1fr;
   }

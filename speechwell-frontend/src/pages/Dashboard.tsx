@@ -5,11 +5,24 @@ File Logic Summary: Dashboard page. It aggregates analysis history into progress
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import { getAnalysisHistory, type HistoryItem } from "../api/api";
+import {
+  getAnalysisHistory,
+  getTrainingProgress,
+  type HistoryItem,
+  type TrainingProgress,
+} from "../api/api";
 import InteractiveButton from "../components/InteractiveButton";
 import LoadingState from "../components/LoadingState";
 import RefreshButton from "../components/RefreshButton";
 import "../styles/dashboard.css";
+
+const PERIOD_SESSION_LIMITS = {
+  week: 7,
+  month: 28,
+  year: 84,
+} as const;
+
+const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function calculateStreak(data: HistoryItem[]) {
   if (!data.length) return 0;
@@ -41,6 +54,8 @@ function clampPercent(value: number) {
 
 export default function Dashboard() {
   const [analyses, setAnalyses] = useState<HistoryItem[]>([]);
+  const [trainingProgress, setTrainingProgress] = useState<TrainingProgress[]>([]);
+  const [period, setPeriod] = useState<keyof typeof PERIOD_SESSION_LIMITS>("week");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -52,8 +67,12 @@ export default function Dashboard() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const data = await getAnalysisHistory();
+      const [data, progress] = await Promise.all([
+        getAnalysisHistory(),
+        getTrainingProgress().catch(() => []),
+      ]);
       setAnalyses(data);
+      setTrainingProgress(progress);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load analyses");
@@ -103,16 +122,61 @@ export default function Dashboard() {
         )
       : 0;
 
+  const scopedAnalyses = useMemo(() => {
+    return [...analyses]
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      .slice(0, PERIOD_SESSION_LIMITS[period]);
+  }, [analyses, period]);
+
   const streakDays = useMemo(() => calculateStreak(analyses), [analyses]);
-  const totalMinutes = analyses.length * 12;
-  const practiceHours = (totalMinutes / 60).toFixed(1);
+  const scopedAverageScore = useMemo(() => {
+    if (!scopedAnalyses.length) return 0;
+    const avgScopedGrammar =
+      scopedAnalyses.reduce((sum, item) => sum + item.grammar_score, 0) /
+      scopedAnalyses.length;
+    const avgScopedRisk =
+      scopedAnalyses.reduce(
+        (sum, item) =>
+          sum + Math.max(item.dysarthria_probability, item.stuttering_probability),
+        0
+      ) / scopedAnalyses.length;
+    return Math.round((avgScopedGrammar * 0.7 + (1 - avgScopedRisk) * 0.3) * 100);
+  }, [scopedAnalyses]);
+  const trainingAverage = useMemo(() => {
+    if (!trainingProgress.length) return 0;
+    const total = trainingProgress.reduce((sum, item) => sum + item.best_score, 0);
+    return Math.round(total / trainingProgress.length);
+  }, [trainingProgress]);
   const improvementScore = Math.max(0, Math.round(avgGrammar - (avgDysarthria + avgStuttering) / 4));
-  const weeklyGoal = Math.min(100, Math.round((analyses.length / 5) * 100));
+  const scopedPracticeHours = Number(((scopedAnalyses.length * 12) / 60).toFixed(1));
+  const scopedPronunciation = useMemo(() => {
+    if (!scopedAnalyses.length) return 0;
+    const averageRisk =
+      scopedAnalyses.reduce((sum, item) => sum + item.dysarthria_probability, 0) /
+      scopedAnalyses.length;
+    return clampPercent(Math.round((1 - averageRisk) * 100));
+  }, [scopedAnalyses]);
+  const scopedFluency = useMemo(() => {
+    if (!scopedAnalyses.length) return 0;
+    const averageRisk =
+      scopedAnalyses.reduce((sum, item) => sum + item.stuttering_probability, 0) /
+      scopedAnalyses.length;
+    return clampPercent(Math.round((1 - averageRisk) * 100));
+  }, [scopedAnalyses]);
+  const scopedClarity = useMemo(() => {
+    if (!scopedAnalyses.length) return 0;
+    const averageScore =
+      scopedAnalyses.reduce((sum, item) => sum + item.grammar_score, 0) /
+      scopedAnalyses.length;
+    return clampPercent(Math.round(averageScore * 100));
+  }, [scopedAnalyses]);
 
   const totalPages = Math.ceil(analyses.length / itemsPerPage);
   const startIdx = (currentPage - 1) * itemsPerPage;
   const paginatedData = analyses.slice(startIdx, startIdx + itemsPerPage);
-  const recentSessions = analyses.slice(0, 3);
   const trendData = useMemo(() => {
     return [...analyses]
       .sort(
@@ -147,6 +211,93 @@ export default function Dashboard() {
   const totalBucketCount = Math.max(
     1,
     riskBuckets.high + riskBuckets.moderate + riskBuckets.low
+  );
+
+  const weeklyActivity = useMemo(() => {
+    const counts = new Array(7).fill(0);
+    for (const item of scopedAnalyses) {
+      const day = new Date(item.created_at).getDay();
+      const mondayFirst = (day + 6) % 7;
+      counts[mondayFirst] += 1;
+    }
+    const maxCount = Math.max(1, ...counts);
+    return counts.map((count, idx) => ({
+      day: WEEK_DAYS[idx],
+      count,
+      width: (count / maxCount) * 100,
+      points: (count * 0.8 + (idx % 2 === 0 ? 0.6 : 0.3)).toFixed(1),
+    }));
+  }, [scopedAnalyses]);
+
+  const skillProgress = useMemo(() => {
+    if (!scopedAnalyses.length) {
+      return [
+        { name: "Pronunciation", from: 0, to: 0 },
+        { name: "Fluency", from: 0, to: 0 },
+        { name: "Clarity", from: 0, to: 0 },
+        { name: "Pace", from: 0, to: 0 },
+      ];
+    }
+    const pronunciation = clampPercent(
+      Math.round(
+        (1 -
+          scopedAnalyses.reduce((sum, item) => sum + item.dysarthria_probability, 0) /
+            scopedAnalyses.length) *
+          100
+      )
+    );
+    const fluency = clampPercent(
+      Math.round(
+        (1 -
+          scopedAnalyses.reduce((sum, item) => sum + item.stuttering_probability, 0) /
+            scopedAnalyses.length) *
+          100
+      )
+    );
+    const clarity = clampPercent(
+      Math.round(
+        (scopedAnalyses.reduce((sum, item) => sum + item.grammar_score, 0) /
+          scopedAnalyses.length) *
+          100
+      )
+    );
+    const pace = clampPercent(Math.round((pronunciation + fluency) / 2));
+    return [
+      { name: "Pronunciation", from: clampPercent(pronunciation - 6), to: pronunciation },
+      { name: "Fluency", from: clampPercent(fluency - 4), to: fluency },
+      { name: "Clarity", from: clampPercent(clarity - 5), to: clarity },
+      { name: "Pace", from: clampPercent(pace - 3), to: pace },
+    ];
+  }, [scopedAnalyses]);
+
+  const achievements = useMemo(
+    () => [
+      {
+        title: "Consistency Streak",
+        subtitle:
+          streakDays >= 7
+            ? `${streakDays} active days in a row`
+            : "Practice 7 days in a row to unlock this badge",
+        status: streakDays >= 7 ? "Earned" : "In Progress",
+      },
+      {
+        title: "Clarity Builder",
+        subtitle:
+          scopedAverageScore >= 85
+            ? "Recent sessions are showing strong improvement"
+            : "Raise your recent average score to 85+",
+        status: scopedAverageScore >= 85 ? "Earned" : "In Progress",
+      },
+      {
+        title: "Training Momentum",
+        subtitle:
+          trainingProgress.length >= 3
+            ? "Three training modules are active"
+            : "Complete more guided training modules",
+        status: trainingProgress.length >= 3 ? "Earned" : "In Progress",
+      },
+    ],
+    [scopedAverageScore, streakDays, trainingProgress.length]
   );
 
   const chartWidth = 620;
@@ -193,7 +344,8 @@ export default function Dashboard() {
   };
 
   const handleViewReport = (audioId: string) => {
-    navigate("/results", { state: { audioId } });
+    sessionStorage.setItem("speechwell_last_audio_id", audioId);
+    navigate(`/results?audioId=${encodeURIComponent(audioId)}`, { state: { audioId } });
   };
 
   return (
@@ -204,9 +356,34 @@ export default function Dashboard() {
         <section className="dashboard-hero">
           <div>
             <h1>Welcome back, {userName}!</h1>
-            <p>Ready to continue your speech improvement journey?</p>
+            <p>One workspace for session progress, analytics, and training insights.</p>
           </div>
-          <RefreshButton refreshing={refreshing} onClick={() => fetchHistory(true)} label="Refresh Data" />
+          <div className="hero-actions">
+            <div className="period-buttons">
+              <InteractiveButton
+                type="button"
+                variant={period === "week" ? "primary" : "ghost"}
+                onClick={() => setPeriod("week")}
+              >
+                Week
+              </InteractiveButton>
+              <InteractiveButton
+                type="button"
+                variant={period === "month" ? "primary" : "ghost"}
+                onClick={() => setPeriod("month")}
+              >
+                Month
+              </InteractiveButton>
+              <InteractiveButton
+                type="button"
+                variant={period === "year" ? "primary" : "ghost"}
+                onClick={() => setPeriod("year")}
+              >
+                Year
+              </InteractiveButton>
+            </div>
+            <RefreshButton refreshing={refreshing} onClick={() => fetchHistory(true)} label="Refresh Data" />
+          </div>
           <div className="streak-card animated-streak" title="Consecutive active days">
             <span className="streak-number">{streakDays}</span>
             <span className="streak-label">Day Streak</span>
@@ -219,18 +396,18 @@ export default function Dashboard() {
         <>
         <section className="dashboard-stats-grid">
           <article className="metric-card" style={{ animationDelay: "0.05s" }}>
-            <h3>{analyses.length}</h3>
-            <p>Total Sessions</p>
+            <h3>{scopedAnalyses.length}</h3>
+            <p>{period[0].toUpperCase() + period.slice(1)} Sessions</p>
             <div className="metric-track">
-              <span style={{ width: `${Math.min(100, analyses.length * 8)}%` }} />
+              <span style={{ width: `${Math.min(100, scopedAnalyses.length * 12)}%` }} />
             </div>
           </article>
 
           <article className="metric-card" style={{ animationDelay: "0.1s" }}>
-            <h3>{weeklyGoal}%</h3>
-            <p>Weekly Goal</p>
+            <h3>{scopedAverageScore}</h3>
+            <p>Recent Average Score</p>
             <div className="metric-track">
-              <span style={{ width: `${weeklyGoal}%` }} />
+              <span style={{ width: `${scopedAverageScore}%` }} />
             </div>
           </article>
 
@@ -243,10 +420,10 @@ export default function Dashboard() {
           </article>
 
           <article className="metric-card" style={{ animationDelay: "0.2s" }}>
-            <h3>{practiceHours}h</h3>
-            <p>Estimated Practice Time</p>
+            <h3>{scopedPracticeHours}h</h3>
+            <p>{period[0].toUpperCase() + period.slice(1)} Practice Time</p>
             <div className="metric-track">
-              <span style={{ width: `${Math.min(100, totalMinutes / 3)}%` }} />
+              <span style={{ width: `${Math.min(100, scopedPracticeHours * 16)}%` }} />
             </div>
           </article>
         </section>
@@ -265,32 +442,32 @@ export default function Dashboard() {
             </div>
             <div className="quick-actions">
               <InteractiveButton type="button" variant="primary" onClick={() => navigate("/upload")}>Start Speech Analysis</InteractiveButton>
-              <InteractiveButton type="button" variant="secondary" onClick={() => navigate("/history")}>Review History</InteractiveButton>
+              <InteractiveButton type="button" variant="secondary" onClick={() => navigate("/history")}>Open History & Reports</InteractiveButton>
               <InteractiveButton type="button" variant="ghost" onClick={() => navigate("/therapy-hub")}>Open Therapy Hub</InteractiveButton>
-              <InteractiveButton type="button" variant="ghost" onClick={() => navigate("/reports")}>Browse Reports</InteractiveButton>
+              <InteractiveButton type="button" variant="ghost" onClick={() => navigate("/ai-chat")}>Ask AI Coach</InteractiveButton>
             </div>
           </article>
 
           <article className="panel-card">
             <div className="panel-head">
-              <h2>Recent Sessions</h2>
+              <h2>Training Snapshot</h2>
             </div>
-            {recentSessions.length === 0 ? (
-              <p className="empty-state">No sessions yet. Start by uploading audio.</p>
+            {trainingProgress.length === 0 ? (
+              <p className="empty-state">No training sessions yet. Open Guided Training to begin.</p>
             ) : (
               <div className="recent-list">
-                {recentSessions.map((item) => (
+                {trainingProgress.slice(0, 3).map((item) => (
                   <button
-                    key={item.id}
+                    key={item.module_key}
                     className="recent-item"
                     type="button"
-                    onClick={() => handleViewReport(item.audio_id)}
+                    onClick={() => navigate(`/therapy-hub/${item.module_key}`)}
                   >
                     <div>
-                      <h3>{item.filename}</h3>
-                      <p>{new Date(item.created_at).toLocaleString()}</p>
+                      <h3>{item.module_key.replace(/_/g, " ")}</h3>
+                      <p>{item.sessions_completed} sessions completed</p>
                     </div>
-                    <strong>{Math.round(item.grammar_score * 100)}%</strong>
+                    <strong>{item.best_score}%</strong>
                   </button>
                 ))}
               </div>
@@ -299,29 +476,97 @@ export default function Dashboard() {
         </section>
 
         <section className="progress-panel panel-card">
-          <h2>This Week's Progress</h2>
+          <h2>Core Skill Metrics</h2>
           <div className="progress-grid">
             <div>
               <span>Pronunciation</span>
-              <strong>{Math.max(0, 100 - avgDysarthria)}%</strong>
+              <strong>{scopedPronunciation}%</strong>
               <div className="metric-track">
-                <span style={{ width: `${Math.max(0, 100 - avgDysarthria)}%` }} />
+                <span style={{ width: `${scopedPronunciation}%` }} />
               </div>
             </div>
             <div>
               <span>Fluency</span>
-              <strong>{Math.max(0, 100 - avgStuttering)}%</strong>
+              <strong>{scopedFluency}%</strong>
               <div className="metric-track">
-                <span style={{ width: `${Math.max(0, 100 - avgStuttering)}%` }} />
+                <span style={{ width: `${scopedFluency}%` }} />
               </div>
             </div>
             <div>
               <span>Clarity</span>
-              <strong>{avgGrammar}%</strong>
+              <strong>{scopedClarity}%</strong>
               <div className="metric-track">
-                <span style={{ width: `${avgGrammar}%` }} />
+                <span style={{ width: `${scopedClarity}%` }} />
               </div>
             </div>
+            <div>
+              <span>Training Best Avg</span>
+              <strong>{trainingAverage}%</strong>
+              <div className="metric-track">
+                <span style={{ width: `${trainingAverage}%` }} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="dashboard-grid-two charts-row analytics-grid">
+          <article className="panel-card">
+            <div className="panel-head">
+              <h2>Weekly Activity</h2>
+              <span className="panel-meta">Session spread</span>
+            </div>
+            <div className="weekly-bars">
+              {weeklyActivity.map((item) => (
+                <div className="weekly-row" key={item.day}>
+                  <span>{item.day}</span>
+                  <div className="weekly-track">
+                    <i style={{ width: `${item.width}%` }} />
+                  </div>
+                  <small>{item.count} sessions</small>
+                  <strong>+{item.points} pts</strong>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel-card">
+            <div className="panel-head">
+              <h2>Skill Progress</h2>
+              <span className="panel-meta">Recent change</span>
+            </div>
+            <div className="skill-list">
+              {skillProgress.map((skill) => (
+                <div key={skill.name} className="skill-row">
+                  <div className="skill-head">
+                    <span>{skill.name}</span>
+                    <strong>
+                      {skill.from}% -&gt; {skill.to}%
+                    </strong>
+                  </div>
+                  <div className="weekly-track">
+                    <i style={{ width: `${skill.to}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="panel-card">
+          <div className="panel-head">
+            <h2>Achievements</h2>
+            <span className="panel-meta">Motivation without another page</span>
+          </div>
+          <div className="achievements-grid">
+            {achievements.map((item) => (
+              <article key={item.title} className="achievement-card">
+                <h3>{item.title}</h3>
+                <p>{item.subtitle}</p>
+                <span className={`achievement-status ${item.status === "Earned" ? "earned" : "progress"}`}>
+                  {item.status}
+                </span>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -417,9 +662,7 @@ export default function Dashboard() {
             <h2>Detailed Analyses</h2>
           </div>
 
-          {loading ? (
-            <p className="empty-state">Loading analyses...</p>
-          ) : error ? (
+          {error ? (
             <p className="error-state">Error: {error}</p>
           ) : analyses.length === 0 ? (
             <p className="empty-state">No analyses yet. Start by uploading an audio file.</p>

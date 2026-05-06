@@ -1,0 +1,19 @@
+{
+  "data_path": "ml\\training\\torgo_audio_features_v4.csv",
+  "model_path": "ml\\models\\dysarthria_model_v2_rf_svc_ensemble.pkl",
+  "samples": 17612,
+  "accuracy": 0.9846127640245287,
+  "precision": 0.9939577039274925,
+  "recall": 0.9618320610687023,
+  "f1_score": 0.9776310359059017,
+  "confusion_matrix": [
+    [
+      11419,
+      36
+    ],
+    [
+      235,
+      5922
+    ]
+  ]
+}

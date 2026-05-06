@@ -1,53 +1,84 @@
 """
-File Logic Summary: Phonological analysis module. Algorithm applies rule-based phoneme substitution checks per word and computes a normalized phonological-error probability.
+File Logic Summary: Lightweight phonological/articulation proxy. Because the
+app does not know the target word sequence, it estimates articulation risk from
+pronunciation-unstable transcript patterns instead of attempting a false
+phoneme-for-phoneme diagnosis.
 """
 
-PHONOLOGICAL_RULES = {
-    "R": ["W"],
-    "K": ["T"],
-    "G": ["D"],
-    "S": ["TH"],
-    "TH": ["F", "D"],
-    "L": ["W"]
-}
+from __future__ import annotations
+
+import re
+from statistics import mean, pstdev
+
+
+WORD_PATTERN = re.compile(r"[a-z']+")
+FRAGMENT_PATTERN = re.compile(r"\b([a-z])(?:[-\s]+)([a-z]{2,})")
+
+
+def _tokenize(text: str) -> list[str]:
+    return WORD_PATTERN.findall((text or "").lower())
+
+
+def _segment_rate_variability(segments: list[dict]) -> float:
+    rates = [
+        float(seg.get("rate_wps") or 0.0)
+        for seg in segments
+        if float(seg.get("duration_sec") or 0.0) >= 0.2 and int(seg.get("word_count") or 0) > 0
+    ]
+    if len(rates) < 2:
+        return 0.0
+    average = mean(rates)
+    if average <= 0:
+        return 0.0
+    return min((pstdev(rates) / average) / 0.8, 1.0)
 
 
 def detect_phonological_errors(whisper_features: dict) -> dict:
-    try:
-        import pronouncing
-    except Exception:
+    transcript = whisper_features.get("transcript", "")
+    segments = whisper_features.get("segments") or []
+    words = _tokenize(transcript)
+
+    if not words:
         return {
             "phonological_error_probability": 0.0,
             "error_count": 0,
             "affected_words": [],
         }
 
-    transcript = whisper_features["transcript"].lower()
-    words = transcript.split()
+    one_letter_fragments = [word for word in words if len(word) == 1 and word not in {"a", "i"}]
+    repaired_words = [
+        word
+        for fragment, word in FRAGMENT_PATTERN.findall((transcript or "").lower())
+        if word.startswith(fragment)
+    ]
+    elongated_spelling_words = re.findall(r"\b[a-z]*(?:[aeiou]){3,}[a-z]*\b", (transcript or "").lower())
 
-    error_count = 0
-    affected_words = []
+    slow_short_segments = 0
+    for seg in segments:
+        duration = float(seg.get("duration_sec") or 0.0)
+        word_count = int(seg.get("word_count") or 0)
+        if word_count in {1, 2} and duration / max(word_count, 1) >= 0.8:
+            slow_short_segments += 1
 
-    for word in words:
-        phones_list = pronouncing.phones_for_word(word)
-        if not phones_list:
-            continue
+    fragment_ratio = min(len(one_letter_fragments) / max(len(words), 1), 1.0)
+    repair_ratio = min(len(repaired_words) / max(len(words), 1), 1.0)
+    elongation_ratio = min(len(elongated_spelling_words) / max(len(words), 1), 1.0)
+    segment_instability = _segment_rate_variability(segments)
+    slow_segment_ratio = min(slow_short_segments / max(len(segments), 1), 1.0) if segments else 0.0
 
-        expected_phones = phones_list[0].split()
+    probability = min(
+        fragment_ratio * 0.35
+        + repair_ratio * 0.3
+        + elongation_ratio * 0.15
+        + segment_instability * 0.1
+        + slow_segment_ratio * 0.1,
+        1.0,
+    )
 
-        for phoneme, substitutions in PHONOLOGICAL_RULES.items():
-            if phoneme in expected_phones:
-                for sub in substitutions:
-                    if sub in expected_phones:
-                        error_count += 1
-                        affected_words.append(word)
-                        break
-
-    probability = min(error_count / max(len(words), 1), 1.0)
-
+    affected_words = sorted(set(repaired_words + one_letter_fragments))
+    error_count = len(one_letter_fragments) + len(repaired_words) + slow_short_segments
     return {
         "phonological_error_probability": round(probability, 3),
         "error_count": error_count,
-        "affected_words": list(set(affected_words))
+        "affected_words": affected_words[:10],
     }
-

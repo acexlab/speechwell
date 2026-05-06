@@ -5,6 +5,7 @@ File Logic Summary: Database schema definitions for users and analyses. These mo
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
 from sqlalchemy.sql import func
 from .db import Base
+from backend.app.services.score_service import calculate_overall_score
 
 
 class User(Base):
@@ -60,6 +61,7 @@ class Analysis(Base):
     
     # File Paths
     pdf_path = Column(String, nullable=True)
+    report_filename = Column(String, nullable=True)
     audio_path = Column(String, nullable=True)
     
     # Status
@@ -68,4 +70,49 @@ class Analysis(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    @property
+    def overall_score(self) -> int:
+        return calculate_overall_score(
+            self.dysarthria_probability,
+            self.stuttering_probability,
+            self.grammar_score,
+        )
+
+
+class TrainingSession(Base):
+    __tablename__ = "training_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    module_key = Column(String, index=True)
+    exercise_key = Column(String, index=True)
+    prompt_text = Column(Text, nullable=True)
+    expected_text = Column(Text, nullable=True)
+    transcript = Column(Text, nullable=True)
+    input_mode = Column(String, default="mic")
+    accuracy_score = Column(Float, default=0.0)
+    fluency_score = Column(Float, default=0.0)
+    confidence_score = Column(Float, default=0.0)
+    long_pause_count = Column(Integer, default=0)
+    repeated_word_count = Column(Integer, default=0)
+    duration_sec = Column(Float, default=0.0)
+    feedback_summary = Column(Text, nullable=True)
+    corrected_text = Column(Text, nullable=True)
+    status = Column(String, default="started")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class TrainingProgress(Base):
+    __tablename__ = "training_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    module_key = Column(String, index=True)
+    sessions_completed = Column(Integer, default=0)
+    avg_accuracy = Column(Float, default=0.0)
+    avg_fluency = Column(Float, default=0.0)
+    best_score = Column(Float, default=0.0)
+    last_practiced_at = Column(DateTime(timezone=True), nullable=True)
 

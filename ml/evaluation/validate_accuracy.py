@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -22,17 +23,27 @@ from sklearn.metrics import (
     recall_score,
 )
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from ml.dysarthria_pipeline_config import (
+    DYSARTHRIA_V2_DATA_PATH,
+    DYSARTHRIA_V2_MODEL_PATH,
+    DYSARTHRIA_V2_VALIDATION_PATH,
+)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate dysarthria model accuracy")
     parser.add_argument(
         "--data",
-        default="ml/training/torgo_features_full.pkl",
+        default=DYSARTHRIA_V2_DATA_PATH,
         help="Path to dataset (.pkl or .csv)",
     )
     parser.add_argument(
         "--model",
-        default="ml/models/dysarthria_model_v1.pkl",
+        default=DYSARTHRIA_V2_MODEL_PATH,
         help="Path to trained classifier",
     )
     parser.add_argument(
@@ -52,7 +63,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--save-json",
-        default="",
+        default=DYSARTHRIA_V2_VALIDATION_PATH,
         help="Optional path to save metrics JSON report",
     )
     return parser.parse_args()
@@ -60,7 +71,18 @@ def parse_args() -> argparse.Namespace:
 
 def load_dataset(path: Path) -> pd.DataFrame:
     if not path.exists():
-        raise FileNotFoundError(f"Dataset not found: {path}")
+        fallback_path = Path("ml/training/torgo_features_sample.csv")
+        if path == Path("ml/training/torgo_features_full.pkl") and fallback_path.exists():
+            print(
+                "Default dataset not found at "
+                f"{path}. Falling back to sample dataset: {fallback_path}"
+            )
+            path = fallback_path
+        else:
+            raise FileNotFoundError(
+                f"Dataset not found: {path}. "
+                "Pass --data with a valid .pkl or .csv dataset path."
+            )
 
     if path.suffix.lower() == ".pkl":
         return pd.read_pickle(path)
@@ -106,6 +128,7 @@ def build_feature_matrix(
     x_fluency = df[fluency_cols].to_numpy(dtype=np.float32)
 
     if "embedding" not in df.columns:
+        print("Embedding column not found. Using fluency-only features for validation.")
         return x_fluency
 
     acoustic_vectors = np.vstack(df["embedding"].map(parse_embedding_cell).values)
@@ -118,6 +141,25 @@ def build_feature_matrix(
     acoustic_scaled = scaler.transform(acoustic_vectors)
     acoustic_pca = pca.transform(acoustic_scaled)
     return np.hstack([x_fluency, acoustic_pca])
+
+
+def build_pipeline_feature_frame(df: pd.DataFrame, model: Any) -> pd.DataFrame | None:
+    if not hasattr(model, "feature_names_in_"):
+        return None
+
+    feature_columns = list(model.feature_names_in_)
+    missing_columns = [column for column in feature_columns if column not in df.columns]
+    if missing_columns:
+        raise ValueError(
+            "Pipeline model requires dataset columns that are missing: "
+            f"{missing_columns}"
+        )
+
+    return df[feature_columns].copy()
+
+
+def is_pipeline_model(model: Any) -> bool:
+    return hasattr(model, "feature_names_in_")
 
 
 def main() -> None:
@@ -135,17 +177,41 @@ def main() -> None:
     if args.target not in df.columns:
         raise ValueError(f"Target column '{args.target}' not found in dataset")
 
-    model = joblib.load(model_path)
-    scaler = joblib.load(scaler_path) if scaler_path.exists() else None
-    pca = joblib.load(pca_path) if pca_path.exists() else None
+    try:
+        model = joblib.load(model_path)
+    except Exception as exc:
+        raise RuntimeError(
+            f"Failed to load model '{model_path}'. "
+            "This often means the pickle was created with a different scikit-learn version. "
+            "Retrain the model in the active environment and try again."
+        ) from exc
 
-    x = build_feature_matrix(df, scaler=scaler, pca=pca)
+    scaler = None
+    pca = None
+    if not is_pipeline_model(model):
+        scaler = joblib.load(scaler_path) if scaler_path.exists() else None
+        pca = joblib.load(pca_path) if pca_path.exists() else None
+
+    x_pipeline = build_pipeline_feature_frame(df, model)
+    x = x_pipeline if x_pipeline is not None else build_feature_matrix(df, scaler=scaler, pca=pca)
     y = df[args.target].to_numpy()
 
-    if hasattr(model, "n_features_in_") and model.n_features_in_ != x.shape[1]:
+    if x_pipeline is None and hasattr(model, "n_features_in_") and model.n_features_in_ != x.shape[1]:
+        dataset_hint = ""
+        if "embedding" not in df.columns and model.n_features_in_ > x.shape[1]:
+            dataset_hint = (
+                " The current dataset does not include the 'embedding' column, "
+                "so it only builds 3 fluency features. "
+                "The default saved model was trained on the full feature dataset "
+                "'ml/training/torgo_features_full.pkl', which includes embeddings. "
+                "Generate that dataset with "
+                "'python ml/feature_extraction/extract_torgo_features.py' "
+                "or pass --data to a compatible dataset."
+            )
         raise ValueError(
             "Feature mismatch between model and dataset. "
             f"Model expects {model.n_features_in_}, but built features have {x.shape[1]}."
+            f"{dataset_hint}"
         )
 
     y_pred = model.predict(x)

@@ -22,7 +22,44 @@
 }
 
 .history-header h1 {
-  color: #11395f;
+  color: var(--text-strong);
+}
+
+.history-header p {
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.history-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+}
+
+.history-summary-card {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 94%, transparent),
+    color-mix(in srgb, var(--surface-elevated) 92%, transparent)
+  );
+  box-shadow: var(--shadow-sm);
+  padding: 0.85rem 0.95rem;
+}
+
+.history-summary-card span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.history-summary-card strong {
+  color: var(--text-strong);
+  font-size: 1.7rem;
 }
 
 .history-filters {
@@ -31,8 +68,12 @@
   align-items: center;
   gap: 0.55rem;
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #fff, #f8fcff);
-  border: 1px solid rgba(208, 225, 242, 0.9);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 94%, transparent),
+    color-mix(in srgb, var(--surface-elevated) 92%, transparent)
+  );
+  border: 1px solid var(--border);
   padding: 0.75rem;
   box-shadow: var(--shadow-sm);
   margin-bottom: 0.9rem;
@@ -50,11 +91,11 @@
   padding: 0.5rem 0.68rem;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-soft));
 }
 
 .date-separator {
-  color: #7e97b0;
+  color: var(--text-muted);
   font-weight: 700;
   font-size: 0.82rem;
 }
@@ -68,8 +109,8 @@
 
 .table-responsive {
   border-radius: var(--radius-md);
-  border: 1px solid rgba(208, 225, 242, 0.9);
-  background: #fff;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 96%, var(--surface-soft));
   overflow: auto;
   box-shadow: var(--shadow-sm);
 }
@@ -81,30 +122,30 @@
 }
 
 .history-table thead {
-  background: #f4f9ff;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
 }
 
 .history-table th,
 .history-table td {
   padding: 0.72rem;
   text-align: left;
-  border-bottom: 1px solid #edf3fa;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
 }
 
 .history-table th {
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: #5f7994;
+  color: var(--text-muted);
 }
 
 .history-table td {
   font-size: 0.9rem;
-  color: #214160;
+  color: var(--text-strong);
 }
 
 .history-table tbody tr:hover {
-  background: #f9fcff;
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
 }
 
 .badge {
@@ -140,11 +181,25 @@
   background: linear-gradient(135deg, var(--primary), #1f7ac3);
 }
 
+.download-btn {
+  border-radius: 999px;
+  padding: 0.36rem 0.78rem;
+  font-size: 0.78rem;
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-soft));
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+}
+
+.download-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
 .history-pagination {
   margin-top: 0.85rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(208, 225, 242, 0.9);
-  background: #fff;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-soft));
   box-shadow: var(--shadow-sm);
   padding: 0.65rem 0.75rem;
   display: flex;
@@ -156,7 +211,7 @@
 
 .pagination-info {
   font-size: 0.82rem;
-  color: #5c7690;
+  color: var(--text-muted);
 }
 
 .pagination-buttons {
@@ -170,8 +225,8 @@
   padding: 0;
   border-radius: 9px;
   border: 1px solid var(--border);
-  background: #fff;
-  color: #315778;
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-soft));
+  color: var(--text-strong);
   font-weight: 700;
 }
 
@@ -190,7 +245,7 @@
 @media (max-width: 860px) {
   .history-content {
     margin-left: 0;
-    padding-bottom: 92px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 
   .history-filters {
@@ -220,6 +275,14 @@
 }
 
 @media (max-width: 520px) {
+  .history-content {
+    padding-inline: 0.75rem;
+  }
+
+  .history-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
   .date-filter {
     grid-template-columns: 1fr;
     gap: 0.4rem;
@@ -227,5 +290,11 @@
 
   .date-separator {
     display: none;
+  }
+
+  .pagination-buttons {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
   }
 }

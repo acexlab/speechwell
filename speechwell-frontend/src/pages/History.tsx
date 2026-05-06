@@ -5,7 +5,7 @@ File Logic Summary: History page. It loads analysis records and applies date/sev
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import { getAnalysisHistory, type HistoryItem } from "../api/api";
+import { downloadReport, getAnalysisHistory, type HistoryItem } from "../api/api";
 import LoadingState from "../components/LoadingState";
 import RefreshButton from "../components/RefreshButton";
 import "../styles/history.css";
@@ -21,6 +21,7 @@ export default function History() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [downloadState, setDownloadState] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchHistory = async (isRefresh = false) => {
@@ -100,18 +101,81 @@ export default function History() {
   };
 
   const handleViewReport = (audioId: string) => {
-    navigate("/results", { state: { audioId } });
+    sessionStorage.setItem("speechwell_last_audio_id", audioId);
+    navigate(`/results?audioId=${encodeURIComponent(audioId)}`, { state: { audioId } });
   };
+
+  const handleDownloadReport = async (item: HistoryItem) => {
+    try {
+      setDownloadState(item.audio_id);
+      const { blob, filename } = await downloadReport(item.audio_id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        filename ||
+        item.report_filename ||
+        `${item.filename.replace(/\.[^/.]+$/, "")}_report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to download report");
+    } finally {
+      setDownloadState(null);
+    }
+  };
+
+  const filteredAverageGrammar =
+    filteredData.length > 0
+      ? Math.round(
+          (filteredData.reduce((sum, item) => sum + item.grammar_score, 0) /
+            filteredData.length) *
+            100
+        )
+      : 0;
+
+  const filteredAverageRisk =
+    filteredData.length > 0
+      ? Math.round(
+          (filteredData.reduce(
+            (sum, item) =>
+              sum +
+              Math.max(item.dysarthria_probability, item.stuttering_probability),
+            0
+          ) /
+            filteredData.length) *
+            100
+        )
+      : 0;
 
   return (
     <div className="history-layout">
       <Sidebar />
       <main className="history-content">
         <div className="history-header">
-          <h1>Analysis History</h1>
-          <p>Review and filter all your speech analyses</p>
+          <div>
+            <h1>History & Reports</h1>
+            <p>Review past analyses, open detailed results, and download PDFs from one place.</p>
+          </div>
           <RefreshButton refreshing={refreshing} onClick={() => fetchHistory(true)} />
         </div>
+
+        <section className="history-summary-grid">
+          <article className="history-summary-card">
+            <span>Records in view</span>
+            <strong>{filteredData.length}</strong>
+          </article>
+          <article className="history-summary-card">
+            <span>Average grammar</span>
+            <strong>{filteredAverageGrammar}%</strong>
+          </article>
+          <article className="history-summary-card">
+            <span>Average risk</span>
+            <strong>{filteredAverageRisk}%</strong>
+          </article>
+        </section>
 
         <div className="history-filters">
           <div className="date-filter">
@@ -163,7 +227,8 @@ export default function History() {
                     <th>Dysarthria</th>
                     <th>Stuttering</th>
                     <th>Grammar</th>
-                    <th>View</th>
+                    <th>Open</th>
+                    <th>PDF</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -201,9 +266,20 @@ export default function History() {
                       <td>
                         <button
                           className="view-btn"
+                          type="button"
                           onClick={() => handleViewReport(item.audio_id)}
                         >
                           View Report
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className="download-btn"
+                          type="button"
+                          onClick={() => handleDownloadReport(item)}
+                          disabled={downloadState === item.audio_id}
+                        >
+                          {downloadState === item.audio_id ? "Downloading..." : "Download PDF"}
                         </button>
                       </td>
                     </tr>

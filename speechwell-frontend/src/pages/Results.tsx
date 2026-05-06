@@ -3,9 +3,10 @@ File Logic Summary: Results page. It fetches a single analysis, computes overall
 */
 
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import InteractiveButton from "../components/InteractiveButton";
+import LoadingState from "../components/LoadingState";
 import { getAnalysisResult, downloadReport, type AnalysisResult } from "../api/api";
 import "../styles/results.css";
 
@@ -16,18 +17,23 @@ type ResultsLocationState = {
 export default function Results() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
 
   useEffect(() => {
-    const audioId = (location.state as ResultsLocationState | null)?.audioId;
+    const stateAudioId = (location.state as ResultsLocationState | null)?.audioId;
+    const queryAudioId = searchParams.get("audioId") || undefined;
+    const storedAudioId = sessionStorage.getItem("speechwell_last_audio_id") || undefined;
+    const audioId = stateAudioId || queryAudioId || storedAudioId;
     if (!audioId) {
       setError("No analysis ID provided");
       setLoading(false);
       return;
     }
+    sessionStorage.setItem("speechwell_last_audio_id", audioId);
 
     const fetchAnalysis = async () => {
       try {
@@ -41,16 +47,16 @@ export default function Results() {
     };
 
     fetchAnalysis();
-  }, [location, navigate]);
+  }, [location, navigate, searchParams]);
 
   const handleDownloadPDF = async () => {
     if (!analysis) return;
     try {
-      const blob = await downloadReport(analysis.audio_id);
+      const { blob, filename } = await downloadReport(analysis.audio_id);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `speech_analysis_${analysis.audio_id}.pdf`;
+      a.download = filename || analysis.report_filename || `speech_analysis_${analysis.audio_id}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -62,7 +68,7 @@ export default function Results() {
 
   const handleShare = () => {
     if (!analysis) return;
-    const shareText = `Check out my speech analysis results from SpeechWell! Dysarthria: ${Math.round(analysis.dysarthria_probability * 100)}%, Stuttering: ${Math.round(analysis.stuttering_probability * 100)}%, Grammar: ${Math.round(analysis.grammar_score * 100)}%`;
+    const shareText = `Check out my speech analysis results from SpeechWell! Pronunciation: ${Math.round((1 - analysis.dysarthria_probability) * 100)}%, Fluency: ${Math.round((1 - analysis.stuttering_probability) * 100)}%, Clarity: ${Math.round(analysis.grammar_score * 100)}%`;
     navigator.clipboard.writeText(shareText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -78,8 +84,7 @@ export default function Results() {
         <Sidebar />
         <main className="results-content">
           <div className="results-container">
-            <div className="loading-spinner" />
-            <p>Loading analysis results...</p>
+            <LoadingState label="Loading analysis results..." />
           </div>
         </main>
       </div>
@@ -100,13 +105,7 @@ export default function Results() {
     );
   }
 
-  // Calculate overall score based on probabilities
-  const overallScore = Math.round(
-    ((1 - analysis.dysarthria_probability) * 0.33 +
-      (1 - analysis.stuttering_probability) * 0.33 +
-      (analysis.grammar_score) * 0.34) *
-      100
-  );
+  const overallScore = analysis.overall_score;
 
   const scoreLevel =
     overallScore >= 80
@@ -124,12 +123,140 @@ export default function Results() {
       ? "Moderate"
       : "High";
 
+  const dysRiskPercent = Math.round(analysis.dysarthria_probability * 100);
+  const dysRiskTone =
+    analysis.dysarthria_label === "dysarthria"
+      ? dysRiskPercent >= 90
+        ? "high-likelihood"
+        : "possible"
+      : dysRiskPercent < 20
+      ? "healthy"
+      : dysRiskPercent < 45
+      ? "reduced-risk"
+      : "watch";
+
+  const dysRiskTitle =
+    dysRiskTone === "high-likelihood"
+      ? "Higher likelihood of dysarthria"
+      : dysRiskTone === "possible"
+      ? "Possible dysarthria pattern"
+      : dysRiskTone === "healthy"
+      ? "Healthy speech pattern"
+      : dysRiskTone === "reduced-risk"
+      ? "Healthy with reduced risk"
+      : "Mostly healthy, monitor over time";
+
+  const dysRiskDescription =
+    dysRiskTone === "high-likelihood"
+      ? "The model found strong dysarthria-like patterns in the recording. Use repeated samples and clinical follow-up for confirmation."
+      : dysRiskTone === "possible"
+      ? "Some dysarthria-like features were detected. Try a few more recordings before treating this as a strong concern."
+      : dysRiskTone === "healthy"
+      ? "The recording looks consistent with healthy speech, with little evidence of dysarthria-like motor speech patterns."
+      : dysRiskTone === "reduced-risk"
+      ? "The recording is currently being treated as healthy. A few atypical features were present, but the risk was reduced by the guardrail."
+      : "The result still lands on the healthy side, but it is worth watching trends across multiple recordings.";
+
   const stuttSeverity =
     analysis.stuttering_probability < 0.3
       ? "Mild"
       : analysis.stuttering_probability < 0.6
       ? "Moderate"
       : "Severe";
+
+  const stuttRiskPercent = Math.round(analysis.stuttering_probability * 100);
+  const fluencyScorePercent = Math.round((1 - analysis.stuttering_probability) * 100);
+  const stuttRiskTone =
+    stuttRiskPercent < 15
+      ? "healthy"
+      : stuttRiskPercent < 35
+      ? "reduced-risk"
+      : stuttRiskPercent < 60
+      ? "watch"
+      : stuttRiskPercent < 85
+      ? "possible"
+      : "high-likelihood";
+
+  const stuttRiskTitle =
+    stuttRiskTone === "healthy"
+      ? "Fluent speech pattern"
+      : stuttRiskTone === "reduced-risk"
+      ? "Mostly fluent with minor disfluency"
+      : stuttRiskTone === "watch"
+      ? "Healthy, but monitor fluency"
+      : stuttRiskTone === "possible"
+      ? "Possible stuttering pattern"
+      : "Higher likelihood of stuttering";
+
+  const totalDisfluencyEvents =
+    analysis.stuttering_repetitions +
+    analysis.stuttering_prolongations +
+    analysis.stuttering_blocks;
+
+  const stuttRiskDescription =
+    stuttRiskTone === "healthy"
+      ? "The recording looks broadly fluent, with little evidence of clinically meaningful disfluency."
+      : stuttRiskTone === "reduced-risk"
+      ? "A small number of disfluency markers were detected, but the overall speech pattern still looks mostly fluent."
+      : stuttRiskTone === "watch"
+      ? "Some fluency interruptions were present. This still sits below a strong concern, but it is worth watching across repeated recordings."
+      : stuttRiskTone === "possible"
+      ? "The model detected a noticeable disfluency pattern. Compare a few more recordings before treating this as a stable issue."
+      : "The recording shows a strong disfluency signal with repeated interruptions in flow.";
+
+  const grammarErrorProbability =
+    typeof analysis.grammar_error_probability === "number"
+      ? analysis.grammar_error_probability
+      : 1 - analysis.grammar_score;
+  const grammarSignalPercent = Math.round(grammarErrorProbability * 100);
+  const clarityScorePercent = Math.round(analysis.grammar_score * 100);
+  const grammarRiskTone =
+    grammarSignalPercent < 15
+      ? "healthy"
+      : grammarSignalPercent < 35
+      ? "reduced-risk"
+      : grammarSignalPercent < 60
+      ? "watch"
+      : grammarSignalPercent < 85
+      ? "possible"
+      : "high-likelihood";
+
+  const grammarRiskTitle =
+    grammarRiskTone === "healthy"
+      ? "Clear language structure"
+      : grammarRiskTone === "reduced-risk"
+      ? "Mostly clear with minor issues"
+      : grammarRiskTone === "watch"
+      ? "Healthy, but review phrasing"
+      : grammarRiskTone === "possible"
+      ? "Noticeable grammar issues"
+      : "High grammar correction need";
+
+  const grammarRiskDescription =
+    grammarRiskTone === "healthy"
+      ? "The transcript looks linguistically clear, with little evidence of grammar-level disruption."
+      : grammarRiskTone === "reduced-risk"
+      ? "A few language-level corrections were needed, but the overall structure is still clear."
+      : grammarRiskTone === "watch"
+      ? "Some sentence-level issues were detected. This is still manageable, but worth reviewing over repeated samples."
+      : grammarRiskTone === "possible"
+      ? "The transcript required a meaningful level of grammar correction, which may affect overall clarity."
+      : "The transcript shows a high concentration of grammar-level issues and likely needs guided review.";
+
+  const dysImpactText =
+    analysis.dysarthria_label === "dysarthria"
+      ? "A higher signal here increases concern about motor-speech difficulty, especially when symptom evidence is also present."
+      : "This score is being treated as low enough for a healthy result after the symptom guardrail reviewed the recording.";
+
+  const stuttImpactText =
+    totalDisfluencyEvents === 0
+      ? "With no disfluency events detected, the fluency score stays high and the result remains on the fluent side."
+      : "More repetitions, prolongations, and blocks increase the disfluency signal and reduce the fluency score.";
+
+  const grammarImpactText =
+    analysis.grammar_error_count <= 2
+      ? "Only a small amount of correction was needed, so the transcript is still considered mostly clear."
+      : "As correction needs and estimated errors rise, clarity drops and the result moves closer to a review-needed state.";
 
   return (
     <div className="results-layout">
@@ -171,10 +298,14 @@ export default function Results() {
             {/* Dysarthria Card */}
             <div className="analysis-card dysarthria-card">
               <h3>Dysarthria Analysis</h3>
+              <div className={`risk-banner ${dysRiskTone}`}>
+                <span className="risk-banner-label">{dysRiskTitle}</span>
+                <span className="risk-banner-value">{dysRiskPercent}% signal</span>
+              </div>
               <div className="metric-row">
-                <span className="metric-label">Probability</span>
+                <span className="metric-label">Model Signal</span>
                 <span className="metric-value">
-                  {Math.round(analysis.dysarthria_probability * 100)}%
+                  {dysRiskPercent}%
                 </span>
               </div>
 
@@ -187,33 +318,62 @@ export default function Results() {
                 ></div>
               </div>
 
-              <div className="severity-badges">
-                {["Low", "Moderate", "High"].map((sev) => (
-                  <span
-                    key={sev}
-                    className={`severity-dot ${sev === dysSeverity ? "active" : ""}`}
-                  ></span>
-                ))}
-              </div>
-
               <p className="severity-text">
-                <strong>Severity: {dysSeverity}</strong>
+                <strong>
+                  {analysis.dysarthria_label === "dysarthria" ? "Current decision: Possible concern" : "Current decision: Healthy"}
+                </strong>
               </p>
 
               <p className="analysis-description">
-                Motor speech coordination analysis shows{" "}
-                {dysSeverity === "Low"
-                  ? "normal patterns"
-                  : dysSeverity === "Moderate"
-                  ? "some atypical patterns"
-                  : "significant atypical patterns"}{" "}
-                in articulation and speech production.
+                {dysRiskDescription}
               </p>
+
+              <p className="analysis-description secondary">
+                Raw signal band: {dysSeverity}. The final decision also accounts for symptom evidence,
+                not only the raw percentage.
+              </p>
+
+              <div className="analysis-insight-card">
+                <p className="analysis-insight-title">How To Read This</p>
+                <div className="analysis-insight-row">
+                  <span className="analysis-insight-label">What the score means</span>
+                  <span className="analysis-insight-copy">
+                    Model Signal is the percentage of dysarthria-like motor speech patterns detected in this sample.
+                  </span>
+                </div>
+                <div className="analysis-insight-row">
+                  <span className="analysis-insight-label">How it affects the result</span>
+                  <span className="analysis-insight-copy">{dysImpactText}</span>
+                </div>
+              </div>
             </div>
 
             {/* Stuttering Card */}
             <div className="analysis-card stuttering-card">
               <h3>Stuttering Analysis</h3>
+              <div className={`risk-banner ${stuttRiskTone}`}>
+                <span className="risk-banner-label">{stuttRiskTitle}</span>
+                <span className="risk-banner-value">{stuttRiskPercent}% signal</span>
+              </div>
+              <div className="metric-row">
+                <span className="metric-label">Disfluency Signal</span>
+                <span className="metric-value">{stuttRiskPercent}%</span>
+              </div>
+
+              <div className="progress-bar">
+                <div
+                  className="progress-fill stuttering-fill"
+                  style={{ width: `${stuttRiskPercent}%` }}
+                ></div>
+              </div>
+
+              <div className="metric-row">
+                <span className="metric-label">Fluency Score</span>
+                <span className="metric-value">
+                  {fluencyScorePercent}%
+                </span>
+              </div>
+
               <div className="metric-row">
                 <span className="metric-label">Repetitions</span>
                 <span className="metric-value">{analysis.stuttering_repetitions}</span>
@@ -230,25 +390,56 @@ export default function Results() {
               </div>
 
               <p className="severity-text">
-                <strong>Severity: {stuttSeverity}</strong>
+                <strong>{stuttRiskTone === "healthy" || stuttRiskTone === "reduced-risk" || stuttRiskTone === "watch" ? "Current decision: Mostly fluent" : "Current decision: Possible concern"}</strong>
               </p>
 
               <p className="analysis-description">
-                Fluency analysis detected{" "}
-                {analysis.stuttering_repetitions +
-                  analysis.stuttering_prolongations +
-                  analysis.stuttering_blocks}{" "}
-                disfluency events, indicating {stuttSeverity.toLowerCase()} stuttering patterns.
+                {stuttRiskDescription}
               </p>
+
+              <p className="analysis-description secondary">
+                Raw signal band: {stuttSeverity}. Detected {totalDisfluencyEvents} disfluency event
+                {totalDisfluencyEvents === 1 ? "" : "s"} across repetitions, prolongations, and blocks.
+              </p>
+
+              <div className="analysis-insight-card">
+                <p className="analysis-insight-title">How To Read This</p>
+                <div className="analysis-insight-row">
+                  <span className="analysis-insight-label">What the score means</span>
+                  <span className="analysis-insight-copy">
+                    Disfluency Signal estimates how much the speech flow was interrupted. Fluency Score shows the smoother side of the same result.
+                  </span>
+                </div>
+                <div className="analysis-insight-row">
+                  <span className="analysis-insight-label">How it affects the result</span>
+                  <span className="analysis-insight-copy">{stuttImpactText}</span>
+                </div>
+              </div>
             </div>
 
             {/* Grammar Card */}
             <div className="analysis-card grammar-card">
               <h3>Grammar Analysis</h3>
+              <div className={`risk-banner ${grammarRiskTone}`}>
+                <span className="risk-banner-label">{grammarRiskTitle}</span>
+                <span className="risk-banner-value">{grammarSignalPercent}% signal</span>
+              </div>
               <div className="metric-row">
-                <span className="metric-label">Quality Score</span>
+                <span className="metric-label">Grammar Error Signal</span>
+                <span className="metric-value">{grammarSignalPercent}%</span>
+              </div>
+
+              <div className="progress-bar">
+                <div
+                  className="progress-fill grammar-signal-fill"
+                  style={{ width: `${grammarSignalPercent}%` }}
+                ></div>
+              </div>
+
+              <div className="metric-row">
+                <span className="metric-label">Clarity Score</span>
                 <span className="metric-value">
-                  {Math.round(analysis.grammar_score * 100)}%
+                  {clarityScorePercent}%
                 </span>
               </div>
 
@@ -259,18 +450,38 @@ export default function Results() {
                 ></div>
               </div>
 
+              <p className="severity-text">
+                <strong>{grammarRiskTone === "healthy" || grammarRiskTone === "reduced-risk" || grammarRiskTone === "watch" ? "Current decision: Mostly clear" : "Current decision: Needs review"}</strong>
+              </p>
+
               <div className="metric-row">
                 <span className="metric-label">Estimated Errors</span>
                 <span className="metric-value">{analysis.grammar_error_count}</span>
               </div>
 
               <p className="analysis-description">
-                Language structure analysis identified{" "}
-                {analysis.grammar_error_count > 0
-                  ? `${analysis.grammar_error_count} grammatical patterns for review`
-                  : "coherent language structure with minimal grammatical concerns"}{" "}
-                in the speech sample.
+                {grammarRiskDescription}
               </p>
+
+              {typeof analysis.grammar_error_probability === "number" && (
+                <p className="analysis-description secondary">
+                  Estimated grammar error probability: {Math.round(analysis.grammar_error_probability * 100)}%.
+                </p>
+              )}
+
+              <div className="analysis-insight-card">
+                <p className="analysis-insight-title">How To Read This</p>
+                <div className="analysis-insight-row">
+                  <span className="analysis-insight-label">What the score means</span>
+                  <span className="analysis-insight-copy">
+                    Grammar Error Signal estimates how much correction the transcript needed. Clarity Score reflects how readable and complete the language remained.
+                  </span>
+                </div>
+                <div className="analysis-insight-row">
+                  <span className="analysis-insight-label">How it affects the result</span>
+                  <span className="analysis-insight-copy">{grammarImpactText}</span>
+                </div>
+              </div>
             </div>
 
             {/* Speech Metrics Card */}
@@ -326,8 +537,8 @@ export default function Results() {
               mean the model detected more patterns commonly associated with those conditions.
             </p>
             <p className="analysis-description">
-              Grammar score is a language quality estimate. A lower score usually means the system
-              found more sentence-level issues in the transcript.
+              Clarity score is calculated as `1 - grammar error probability`, so a higher score
+              means the transcript needed fewer grammar-level corrections.
             </p>
             <p className="analysis-description">
               Use trends over multiple uploads rather than one recording. Consistent changes across

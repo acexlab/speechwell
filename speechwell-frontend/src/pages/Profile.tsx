@@ -1,11 +1,13 @@
 /*
-File Logic Summary: Profile settings page. It lets users manage personal details and theme preferences, then persists profile fields to backend DB.
+File Logic Summary: Profile settings page. It lets users manage personal
+details and theme preferences, then persists profile fields to backend DB.
 */
 
 import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import InteractiveButton from "../components/InteractiveButton";
 import { getUserProfile, updateUserProfile, type UserProfile } from "../api/api";
+import { THEME_OPTIONS, applyTheme, getStoredTheme } from "../utils/theme";
 import "../styles/profile.css";
 
 interface ProfileForm {
@@ -17,13 +19,6 @@ interface ProfileForm {
   primary_goal: string;
   bio: string;
 }
-
-const THEME_OPTIONS = [
-  { value: "lavender", label: "Lavender (Default)", colors: ["#2d0c7a", "#f4c7b5", "#ece9f8"] },
-  { value: "ocean", label: "Ocean Blue", colors: ["#0e4f90", "#138d9f", "#d9e9fb"] },
-  { value: "sunset", label: "Sunset Warm", colors: ["#b4451d", "#8a2be2", "#fde6dc"] },
-  { value: "forest", label: "Forest Calm", colors: ["#1e6a45", "#2a9d66", "#d7ebe0"] },
-];
 
 function sanitizeNullable(value: string): string | null {
   return value.trim() ? value.trim() : null;
@@ -39,8 +34,8 @@ export default function Profile() {
     primary_goal: "",
     bio: "",
   });
-  const [theme, setTheme] = useState(localStorage.getItem("speechwell-theme") || "lavender");
-  const [previewTheme, setPreviewTheme] = useState(localStorage.getItem("speechwell-theme") || "lavender");
+  const [theme, setTheme] = useState(getStoredTheme());
+  const [previewTheme, setPreviewTheme] = useState(getStoredTheme());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -111,7 +106,7 @@ export default function Profile() {
       }
 
       setMessage("Settings saved successfully.");
-      localStorage.setItem("speechwell-theme", previewTheme);
+      applyTheme(previewTheme);
       setTheme(previewTheme);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save settings");
@@ -126,7 +121,7 @@ export default function Profile() {
       <main className="profile-content page-enter">
         <div className="profile-header">
           <h1>Settings</h1>
-          <p>Update your personal details and choose your preferred app theme.</p>
+          <p>Update your details and choose the interface theme that feels most comfortable.</p>
         </div>
 
         <form className="profile-form" onSubmit={handleSave}>
@@ -138,7 +133,7 @@ export default function Profile() {
                   type="button"
                   key={option.value}
                   className={`theme-card ${previewTheme === option.value ? "active" : ""}`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  style={{ animationDelay: `${index * 0.08}s` }}
                   onClick={() => setPreviewTheme(option.value)}
                 >
                   <div className="theme-card-head">
@@ -160,7 +155,14 @@ export default function Profile() {
                   <InteractiveButton type="button" variant="ghost" onClick={() => setPreviewTheme(theme)}>
                     Cancel
                   </InteractiveButton>
-                  <InteractiveButton type="button" onClick={() => { localStorage.setItem("speechwell-theme", previewTheme); setTheme(previewTheme); setMessage("Theme applied."); }}>
+                  <InteractiveButton
+                    type="button"
+                    onClick={() => {
+                      applyTheme(previewTheme);
+                      setTheme(previewTheme);
+                      setMessage("Theme applied.");
+                    }}
+                  >
                     Apply Theme
                   </InteractiveButton>
                 </div>

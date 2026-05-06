@@ -23,7 +23,8 @@ def run_full_analysis(audio_path: str) -> dict:
         grammar_result = detect_grammar_errors(transcript)
     except Exception:
         grammar_result = {
-            "grammar_error_probability": 0.0,
+            "grammar_error_probability": 1.0,
+            "grammar_quality_score": 0.0,
             "error_count_estimate": 0,
             "corrected_text": transcript,
         }
@@ -34,12 +35,16 @@ def run_full_analysis(audio_path: str) -> dict:
         acoustic_embedding = [0.0] * 768
 
     try:
-        dysarthria_result = predict_dysarthria(whisper_features, acoustic_embedding)
+        dysarthria_result = predict_dysarthria(
+            whisper_features,
+            acoustic_embedding,
+            audio_path=audio_path,
+        )
     except Exception:
         dysarthria_result = {"label": "unknown", "probability": 0.0}
 
     try:
-        stuttering_result = detect_stuttering(whisper_features)
+        stuttering_result = detect_stuttering(whisper_features, audio_path=audio_path)
     except Exception:
         stuttering_result = {
             "stuttering_probability": 0.0,

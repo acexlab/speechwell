@@ -15,7 +15,7 @@ import requests
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 OPENAI_API_BASE = "https://api.openai.com/v1/chat/completions"
-OLLAMA_API_BASE_DEFAULT = "http://127.0.0.1:11434"
+OLLAMA_API_BASE_DEFAULT = "http://127.0.0.1:11435"
 SYSTEM_PROMPT = (
     "You are SpeechWell AI coach. You must only discuss SpeechWell-related topics: "
     "speech analysis, fluency, stuttering, pronunciation, articulation, pacing, breathing, "
@@ -67,7 +67,8 @@ def _format_analysis_context(analysis_context: dict | None) -> str | None:
         f"- stuttering_repetitions: {analysis_context.get('stuttering_repetitions', 0)}",
         f"- stuttering_prolongations: {analysis_context.get('stuttering_prolongations', 0)}",
         f"- stuttering_blocks: {analysis_context.get('stuttering_blocks', 0)}",
-        f"- grammar_error_probability: {analysis_context.get('grammar_score', 0)}",
+        f"- grammar_quality_score: {analysis_context.get('grammar_score', 0)}",
+        f"- grammar_error_probability: {analysis_context.get('grammar_error_probability', 0)}",
         f"- grammar_error_count: {analysis_context.get('grammar_error_count', 0)}",
         f"- phonological_error_probability: {analysis_context.get('phonological_score', 0)}",
         f"- speaking_rate_wps: {analysis_context.get('speaking_rate_wps', 0)}",

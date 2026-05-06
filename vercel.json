@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "framework": "vite",
+  "installCommand": "cd speechwell-frontend && npm ci",
+  "buildCommand": "cd speechwell-frontend && npm run build",
+  "outputDirectory": "speechwell-frontend/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
