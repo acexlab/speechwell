@@ -41,6 +41,10 @@
   margin-bottom: 1rem;
 }
 
+.video-session-hero {
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 380px);
+}
+
 .training-hero__panel,
 .training-panel {
   border: 1px solid var(--border);
@@ -324,6 +328,10 @@
   margin-top: 1rem;
   display: grid;
   gap: 1rem;
+}
+
+.video-only-panel {
+  margin-top: 0;
 }
 
 .training-video-section__header h2 {

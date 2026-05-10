@@ -6,6 +6,7 @@ title, optional category, and opens the original URL in a new tab.
 import { useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { getYouTubeThumbnailUrl } from "../utils/youtube";
+import { recordVideoAccess } from "../utils/videoAnalytics";
 
 export type TrainingVideo = {
   title: string;
@@ -30,6 +31,7 @@ export default function VideoCard({
   const thumbnailUrl = useMemo(() => getYouTubeThumbnailUrl(video.url), [video.url]);
   const handleSelect = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!onSelect) {
+      recordVideoAccess(video);
       return;
     }
     event.preventDefault();

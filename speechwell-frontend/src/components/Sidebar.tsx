@@ -65,7 +65,7 @@ export default function Sidebar() {
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-1 14H6v-2h12zm0-4H6V7h12z" />
           </svg>
-          <span>Train Your Speech</span>
+          <span>Video Sessions</span>
         </Link>
 
         <Link to="/ai-chat" className={`nav-item ${isActive("/ai-chat") ? "active" : ""}`}>

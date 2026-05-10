@@ -11,9 +11,6 @@ import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import History from "./pages/History";
 import TherapyHub from "./pages/TherapyHub";
-import TrainingModule from "./pages/TrainingModule";
-import TrainingExercise from "./pages/TrainingExercise";
-import TrainingResult from "./pages/TrainingResult";
 import Results from "./pages/Results";
 import Profile from "./pages/Profile";
 import AIChat from "./pages/AIChat";
@@ -42,9 +39,6 @@ function AppShell() {
         <Route path="/upload" element={<Upload />} />
         <Route path="/history" element={<History />} />
         <Route path="/therapy-hub" element={<TherapyHub />} />
-        <Route path="/therapy-hub/:moduleKey" element={<TrainingModule />} />
-        <Route path="/therapy-hub/:moduleKey/:exerciseKey" element={<TrainingExercise />} />
-        <Route path="/therapy-hub/session/:sessionId/result" element={<TrainingResult />} />
         <Route path="/analytics" element={<Dashboard />} />
         <Route path="/ai-chat" element={<AIChat />} />
         <Route path="/results" element={<Results />} />

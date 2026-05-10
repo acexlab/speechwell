@@ -7,13 +7,13 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import {
   getAnalysisHistory,
-  getTrainingProgress,
   type HistoryItem,
-  type TrainingProgress,
 } from "../api/api";
 import InteractiveButton from "../components/InteractiveButton";
 import LoadingState from "../components/LoadingState";
 import RefreshButton from "../components/RefreshButton";
+import { PRACTICE_VIDEOS } from "../data/practiceVideos";
+import { getVideoAccessStats } from "../utils/videoAnalytics";
 import "../styles/dashboard.css";
 
 const PERIOD_SESSION_LIMITS = {
@@ -54,7 +54,6 @@ function clampPercent(value: number) {
 
 export default function Dashboard() {
   const [analyses, setAnalyses] = useState<HistoryItem[]>([]);
-  const [trainingProgress, setTrainingProgress] = useState<TrainingProgress[]>([]);
   const [period, setPeriod] = useState<keyof typeof PERIOD_SESSION_LIMITS>("week");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,12 +66,8 @@ export default function Dashboard() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const [data, progress] = await Promise.all([
-        getAnalysisHistory(),
-        getTrainingProgress().catch(() => []),
-      ]);
+      const data = await getAnalysisHistory();
       setAnalyses(data);
-      setTrainingProgress(progress);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load analyses");
@@ -145,11 +140,12 @@ export default function Dashboard() {
       ) / scopedAnalyses.length;
     return Math.round((avgScopedGrammar * 0.7 + (1 - avgScopedRisk) * 0.3) * 100);
   }, [scopedAnalyses]);
-  const trainingAverage = useMemo(() => {
-    if (!trainingProgress.length) return 0;
-    const total = trainingProgress.reduce((sum, item) => sum + item.best_score, 0);
-    return Math.round(total / trainingProgress.length);
-  }, [trainingProgress]);
+  const videoAccessStats = getVideoAccessStats(PRACTICE_VIDEOS);
+  const watchedVideos = videoAccessStats.filter((video) => video.accessCount > 0);
+  const totalVideoAccesses = videoAccessStats.reduce(
+    (sum, video) => sum + video.accessCount,
+    0
+  );
   const improvementScore = Math.max(0, Math.round(avgGrammar - (avgDysarthria + avgStuttering) / 4));
   const scopedPracticeHours = Number(((scopedAnalyses.length * 12) / 60).toFixed(1));
   const scopedPronunciation = useMemo(() => {
@@ -289,15 +285,15 @@ export default function Dashboard() {
         status: scopedAverageScore >= 85 ? "Earned" : "In Progress",
       },
       {
-        title: "Training Momentum",
+        title: "Video Momentum",
         subtitle:
-          trainingProgress.length >= 3
-            ? "Three training modules are active"
-            : "Complete more guided training modules",
-        status: trainingProgress.length >= 3 ? "Earned" : "In Progress",
+          watchedVideos.length >= 3
+            ? "Three practice videos have been opened"
+            : "Open three practice videos to build momentum",
+        status: watchedVideos.length >= 3 ? "Earned" : "In Progress",
       },
     ],
-    [scopedAverageScore, streakDays, trainingProgress.length]
+    [scopedAverageScore, streakDays, watchedVideos.length]
   );
 
   const chartWidth = 620;
@@ -443,31 +439,32 @@ export default function Dashboard() {
             <div className="quick-actions">
               <InteractiveButton type="button" variant="primary" onClick={() => navigate("/upload")}>Start Speech Analysis</InteractiveButton>
               <InteractiveButton type="button" variant="secondary" onClick={() => navigate("/history")}>Open History & Reports</InteractiveButton>
-              <InteractiveButton type="button" variant="ghost" onClick={() => navigate("/therapy-hub")}>Open Therapy Hub</InteractiveButton>
+              <InteractiveButton type="button" variant="ghost" onClick={() => navigate("/therapy-hub")}>Open Video Sessions</InteractiveButton>
               <InteractiveButton type="button" variant="ghost" onClick={() => navigate("/ai-chat")}>Ask AI Coach</InteractiveButton>
             </div>
           </article>
 
           <article className="panel-card">
             <div className="panel-head">
-              <h2>Training Snapshot</h2>
+              <h2>Video Activity</h2>
+              <span className="panel-meta">{totalVideoAccesses} opens</span>
             </div>
-            {trainingProgress.length === 0 ? (
-              <p className="empty-state">No training sessions yet. Open Guided Training to begin.</p>
+            {watchedVideos.length === 0 ? (
+              <p className="empty-state">No video activity yet. Open Therapy Hub and play a practice video.</p>
             ) : (
               <div className="recent-list">
-                {trainingProgress.slice(0, 3).map((item) => (
+                {watchedVideos.slice(0, 3).map((item) => (
                   <button
-                    key={item.module_key}
+                    key={item.url}
                     className="recent-item"
                     type="button"
-                    onClick={() => navigate(`/therapy-hub/${item.module_key}`)}
+                    onClick={() => navigate("/therapy-hub")}
                   >
                     <div>
-                      <h3>{item.module_key.replace(/_/g, " ")}</h3>
-                      <p>{item.sessions_completed} sessions completed</p>
+                      <h3>{item.title}</h3>
+                      <p>{item.category ?? "Practice Video"}</p>
                     </div>
-                    <strong>{item.best_score}%</strong>
+                    <strong>{item.accessCount}x</strong>
                   </button>
                 ))}
               </div>
@@ -500,10 +497,10 @@ export default function Dashboard() {
               </div>
             </div>
             <div>
-              <span>Training Best Avg</span>
-              <strong>{trainingAverage}%</strong>
+              <span>Video Opens</span>
+              <strong>{totalVideoAccesses}</strong>
               <div className="metric-track">
-                <span style={{ width: `${trainingAverage}%` }} />
+                <span style={{ width: `${Math.min(100, totalVideoAccesses * 12)}%` }} />
               </div>
             </div>
           </div>

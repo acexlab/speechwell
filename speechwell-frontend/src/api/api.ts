@@ -167,6 +167,10 @@ function getAuthHeader(): Record<string, string> {
   return {};
 }
 
+function hasAuthToken(): boolean {
+  return Boolean(localStorage.getItem("accessToken"));
+}
+
 // ============ AUTHENTICATION ENDPOINTS ============
 
 export async function registerUser(
@@ -503,6 +507,10 @@ export async function getTrainingSessions(): Promise<TrainingSession[]> {
 }
 
 export async function getTrainingProgress(): Promise<TrainingProgress[]> {
+  if (!hasAuthToken()) {
+    return [];
+  }
+
   const response = await fetch(`${API_BASE_URL}/api/training/progress`, {
     method: "GET",
     headers: {
